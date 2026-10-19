@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bts-blue: #003366;
+  --color-bts-green: #058441;
+  --color-bts-dark: #1d1d1b;
+  --color-bts-canvas: #f6f8fa;
+  font-family: 'DM Sans', sans-serif;
+  color: #1d1d1b;
+  background: #f6f8fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f6f8fa;
+  color: #1d1d1b;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: #d4f6e2;
+  color: #058441;
+}
+
+button, input {
+  font: inherit;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+  .sidebar-label {
+    display: none;
+  }
+}
