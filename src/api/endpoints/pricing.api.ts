@@ -1,4 +1,5 @@
-import { PricingGrid } from '@/types';
+import type { PricingGrid } from '@/types';
+import { reportError } from '@/lib/reportError';
 
 const PRICING_STORAGE_KEY = 'bts_pricing_grid';
 
@@ -15,7 +16,8 @@ function loadStoredGrid(): PricingGrid {
   try {
     const raw = localStorage.getItem(PRICING_STORAGE_KEY);
     return raw ? (JSON.parse(raw) as PricingGrid) : DEFAULT_PRICING_GRID;
-  } catch {
+  } catch (error) {
+    reportError('pricing.api : loadStoredGrid', error);
     return DEFAULT_PRICING_GRID;
   }
 }

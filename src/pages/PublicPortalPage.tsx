@@ -10,7 +10,10 @@ import { CtaBand } from '@/features/portal/components/CtaBand';
 
 export function PublicPortalPage() {
   return (
-    <PublicLayout title="Transport de colis Chine, Dubaï, Turquie vers l’Afrique de l’Ouest">
+    <PublicLayout
+      title="Transport de colis Chine, Dubaï, Turquie vers l’Afrique de l’Ouest"
+      description="BTS Logistique transporte vos colis de Chine, Dubaï et Turquie vers Abidjan, Dakar et Bamako : groupage maritime, fret aérien, dédouanement et suivi en ligne."
+    >
       <HeroSection />
       <ServicesSection />
       <NetworkSection />

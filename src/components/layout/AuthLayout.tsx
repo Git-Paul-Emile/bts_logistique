@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { PATHS } from '@/router/paths';
@@ -12,11 +12,11 @@ interface AuthLayoutProps {
 }
 
 export function AuthLayout({ title, description, children }: AuthLayoutProps) {
-  useDocumentTitle(title);
+  useDocumentTitle(title, { noIndex: true });
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bts-canvas p-4">
-      <main className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <main className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-xs">
         <div className="mb-6 flex flex-col items-center text-center">
           <Link to={PATHS.home} aria-label="Retour au site BTS Logistique">
             <Logo variant="horizontal" size="md" />

@@ -1,4 +1,5 @@
-import { Client, ClientUpdateInput } from '@/types';
+import type { Client, ClientUpdateInput } from '@/types';
+import { reportError } from '@/lib/reportError';
 
 const CLIENTS_STORAGE_KEY = 'bts_clients_v1';
 
@@ -8,7 +9,7 @@ export const initialClients: Client[] = [
     name: 'Électro Abidjan SARL (M. Koffi)',
     phone: '+225 07 48 92 10 33',
     email: 'koffi.electro@afnet.ci',
-    address: 'Zone 4C, Rue des Carrossiers, Abidjan, Côte d\'Ivoire',
+    address: "Zone 4C, Rue des Carrossiers, Abidjan, Côte d'Ivoire",
     total_billed: 729600,
     amount_paid: 564800,
     package_count: 2,
@@ -41,7 +42,7 @@ export const initialClients: Client[] = [
     name: 'Mme Awa Sanogo (Importatrice Cosmétiques)',
     phone: '+225 05 88 14 20 01',
     email: 'awa.sanogo.import@yahoo.fr',
-    address: 'Angré 8ème Tranche, Cocody, Abidjan, Côte d\'Ivoire',
+    address: "Angré 8ème Tranche, Cocody, Abidjan, Côte d'Ivoire",
     total_billed: 280000,
     amount_paid: 280000,
     package_count: 3,
@@ -57,7 +58,8 @@ function loadStoredClients(): Client[] {
       return initialClients;
     }
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    reportError('clients.api : loadStoredClients', error);
     return initialClients;
   }
 }
@@ -65,8 +67,8 @@ function loadStoredClients(): Client[] {
 function saveClientsToStorage(clients: Client[]) {
   try {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clients));
-  } catch {
-    // ignore
+  } catch (error) {
+    reportError('clients.api : saveClientsToStorage', error);
   }
 }
 
@@ -80,11 +82,13 @@ export const clientsApi = {
     return list.find((c) => c.id === id) || null;
   },
 
-  async createClient(data: Omit<Client, 'id' | 'created_at' | 'total_billed' | 'amount_paid' | 'package_count'>): Promise<Client> {
+  async createClient(
+    data: Omit<Client, 'id' | 'created_at' | 'total_billed' | 'amount_paid' | 'package_count'>
+  ): Promise<Client> {
     const list = loadStoredClients();
     const newClient: Client = {
       ...data,
-      id: `cli-${Date.now()}`,
+      id: `cli-${crypto.randomUUID()}`,
       total_billed: 0,
       amount_paid: 0,
       package_count: 0,
@@ -98,9 +102,11 @@ export const clientsApi = {
   async updateClient(id: string, changes: ClientUpdateInput): Promise<Client | null> {
     const list = loadStoredClients();
     const index = list.findIndex((c) => c.id === id);
-    if (index === -1) return null;
-    list[index] = { ...list[index], ...changes };
+    const current = list[index];
+    if (!current) return null;
+    const updated: Client = { ...current, ...changes };
+    list[index] = updated;
     saveClientsToStorage(list);
-    return list[index];
+    return updated;
   },
 };

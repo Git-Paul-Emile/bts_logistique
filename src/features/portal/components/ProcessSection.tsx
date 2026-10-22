@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import { PROCESS_STEPS } from '../portal.content';
 import { useInViewOnce } from '../hooks/useInViewOnce';
 import { SectionHeading } from './SectionHeading';
@@ -12,7 +12,10 @@ const CIRCLE_TRANSITION_MS = 250;
 function stepTiming(index: number) {
   const circleDelay = index * STEP_DURATION_MS;
   return {
-    circle: { transitionDelay: `${circleDelay}ms`, transitionDuration: `${CIRCLE_TRANSITION_MS}ms` } as CSSProperties,
+    circle: {
+      transitionDelay: `${circleDelay}ms`,
+      transitionDuration: `${CIRCLE_TRANSITION_MS}ms`,
+    } as CSSProperties,
     line: {
       transitionDelay: `${circleDelay + CIRCLE_TRANSITION_MS}ms`,
       transitionDuration: `${STEP_DURATION_MS - CIRCLE_TRANSITION_MS}ms`,
@@ -45,7 +48,7 @@ export function ProcessSection() {
                 {!isLast && (
                   <span
                     aria-hidden="true"
-                    className="absolute left-6 top-12 h-[calc(100%-3rem)] w-0.5 bg-slate-300 lg:left-[calc(50%+1.5rem)] lg:top-6 lg:h-0.5 lg:w-[calc(100%-3rem)]"
+                    className="absolute top-12 left-6 h-[calc(100%-3rem)] w-0.5 bg-slate-300 lg:top-6 lg:left-[calc(50%+1.5rem)] lg:h-0.5 lg:w-[calc(100%-3rem)]"
                   >
                     <span
                       style={timing.line}
@@ -58,14 +61,18 @@ export function ProcessSection() {
                 <span
                   style={timing.circle}
                   className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 font-display text-lg font-bold transition-colors motion-reduce:transition-none ${
-                    inView ? 'border-bts-blue bg-bts-blue text-white' : 'border-slate-300 bg-white text-slate-400'
+                    inView
+                      ? 'border-bts-blue bg-bts-blue text-white'
+                      : 'border-slate-300 bg-white text-slate-400'
                   }`}
                 >
                   {index + 1}
                 </span>
                 <div className="lg:mt-5">
                   <h3 className="font-display text-lg font-bold text-bts-blue">{step.title}</h3>
-                  <p className="mt-1 max-w-xs text-sm leading-relaxed text-slate-600">{step.description}</p>
+                  <p className="mt-1 max-w-xs text-sm leading-relaxed text-slate-600">
+                    {step.description}
+                  </p>
                 </div>
               </li>
             );

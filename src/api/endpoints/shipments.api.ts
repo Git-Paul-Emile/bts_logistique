@@ -1,4 +1,5 @@
-import { Shipment } from '@/types';
+import type { Shipment } from '@/types';
+import { reportError } from '@/lib/reportError';
 
 const SHIPMENTS_STORAGE_KEY = 'bts_shipments_v1';
 
@@ -8,7 +9,7 @@ export const initialShipments: Shipment[] = [
     container_number: 'MSKU-820491-0 (Conteneur 40HQ)',
     type: 'sea',
     origin: 'Guangzhou (Chine)',
-    destination: 'Abidjan (Côte d\'Ivoire)',
+    destination: "Abidjan (Côte d'Ivoire)",
     status: 'in_transit',
     carrier: 'Maersk Line / Navire Maersk Mc-Kinney',
     departure_date: '2026-10-12',
@@ -49,7 +50,7 @@ export const initialShipments: Shipment[] = [
     max_volume_cbm: 33,
     current_volume_cbm: 18.5,
     package_ids: ['pkg-3'],
-    notes: 'Groupage en cours au hub d\'Istanbul. Remplissage à 56%.',
+    notes: "Groupage en cours au hub d'Istanbul. Remplissage à 56%.",
     created_at: '2026-10-16T08:00:00Z',
   },
 ];
@@ -62,7 +63,8 @@ function loadStoredShipments(): Shipment[] {
       return initialShipments;
     }
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    reportError('shipments.api : loadStoredShipments', error);
     return initialShipments;
   }
 }
@@ -70,8 +72,8 @@ function loadStoredShipments(): Shipment[] {
 function saveShipmentsToStorage(shipments: Shipment[]) {
   try {
     localStorage.setItem(SHIPMENTS_STORAGE_KEY, JSON.stringify(shipments));
-  } catch {
-    // ignore
+  } catch (error) {
+    reportError('shipments.api : saveShipmentsToStorage', error);
   }
 }
 
@@ -89,11 +91,25 @@ export const shipmentsApi = {
     const list = loadStoredShipments();
     const newShipment: Shipment = {
       ...data,
-      id: `shp-${Date.now()}`,
+      id: `shp-${crypto.randomUUID()}`,
       created_at: new Date().toISOString(),
     };
     const nextList = [newShipment, ...list];
     saveShipmentsToStorage(nextList);
     return newShipment;
+  },
+
+  async updateShipment(
+    id: string,
+    changes: Partial<Omit<Shipment, 'id' | 'created_at'>>
+  ): Promise<Shipment | null> {
+    const list = loadStoredShipments();
+    const index = list.findIndex((shipment) => shipment.id === id);
+    const current = list[index];
+    if (!current) return null;
+    const updated: Shipment = { ...current, ...changes };
+    list[index] = updated;
+    saveShipmentsToStorage(list);
+    return updated;
   },
 };

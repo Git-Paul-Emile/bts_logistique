@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { quotesApi, fallbackQuotes } from '@/api/endpoints/quotes.api';
-import { Quote } from '@/types';
+import { quotesApi, fallbackQuotes, DEFAULT_PRICING_COEFFICIENT } from '@/api/endpoints/quotes.api';
+import type { Quote } from '@/types';
+
+function fetchQuotesData(): Promise<[number, Quote[]]> {
+  return Promise.all([quotesApi.getPricingCoefficient(), quotesApi.getQuotes()]);
+}
 
 export function useQuotes() {
   const [quotes, setQuotes] = useState<Quote[]>(fallbackQuotes);
-  const [coefficient, setCoefficient] = useState<number>(8.5);
+  const [coefficient, setCoefficient] = useState<number>(DEFAULT_PRICING_COEFFICIENT);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [coeff, list] = await Promise.all([
-        quotesApi.getPricingCoefficient(),
-        quotesApi.getQuotes(),
-      ]);
+      const [coeff, list] = await fetchQuotesData();
       setCoefficient(coeff);
       setQuotes(list);
     } finally {
@@ -23,8 +24,20 @@ export function useQuotes() {
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+    fetchQuotesData()
+      .then(([coeff, list]) => {
+        if (cancelled) return;
+        setCoefficient(coeff);
+        setQuotes(list);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const saveQuote = useCallback(async (newQuote: Quote): Promise<boolean> => {
     setQuotes((current) => [newQuote, ...current]);

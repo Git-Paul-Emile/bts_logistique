@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Menu, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { PATHS } from '@/router/paths';
@@ -25,7 +25,7 @@ export function PortalHeader() {
               <li key={link.href}>
                 <PortalNavLink
                   href={link.href}
-                  className="transition-colors hover:text-bts-green-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  className="transition-colors hover:text-bts-green-400 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white focus-visible:outline-solid"
                 >
                   {link.label}
                 </PortalNavLink>
@@ -43,7 +43,7 @@ export function PortalHeader() {
           </Link>
           <a
             href={QUOTE_ANCHOR}
-            className="hidden h-10 items-center rounded-md bg-bts-green px-4 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:inline-flex"
+            className="hidden h-10 items-center rounded-md bg-bts-green px-4 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:outline-solid sm:inline-flex"
           >
             Demander un devis
           </a>
@@ -61,11 +61,19 @@ export function PortalHeader() {
       </div>
 
       {menuOpen && (
-        <nav id="portal-mobile-menu" aria-label="Navigation mobile" className="border-t border-white/10 lg:hidden">
+        <nav
+          id="portal-mobile-menu"
+          aria-label="Navigation mobile"
+          className="border-t border-white/10 lg:hidden"
+        >
           <ul className="mx-auto max-w-7xl px-4 py-2 sm:px-6">
             {PORTAL_NAV_LINKS.map((link) => (
               <li key={link.href} className="border-b border-white/10">
-                <PortalNavLink href={link.href} onClick={closeMenu} className="block py-3 font-display text-base font-semibold">
+                <PortalNavLink
+                  href={link.href}
+                  onClick={closeMenu}
+                  className="block py-3 font-display text-base font-semibold"
+                >
                   {link.label}
                 </PortalNavLink>
               </li>

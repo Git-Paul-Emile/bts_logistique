@@ -1,4 +1,5 @@
-import { Payment, PaymentMethod } from '@/types';
+import type { Payment } from '@/types';
+import { reportError } from '@/lib/reportError';
 
 const PAYMENTS_STORAGE_KEY = 'bts_payments_v1';
 
@@ -24,7 +25,7 @@ export const initialPayments: Payment[] = [
     amount: 154980,
     payment_method: 'cash',
     reference: 'REC-DKR-0042',
-    notes: 'Règlement total au retrait à l\'entrepôt de Dakar',
+    notes: "Règlement total au retrait à l'entrepôt de Dakar",
     created_at: '2026-10-17T11:30:00Z',
   },
   {
@@ -49,7 +50,8 @@ function loadStoredPayments(): Payment[] {
       return initialPayments;
     }
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    reportError('payments.api : loadStoredPayments', error);
     return initialPayments;
   }
 }
@@ -57,8 +59,8 @@ function loadStoredPayments(): Payment[] {
 function savePaymentsToStorage(payments: Payment[]) {
   try {
     localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
-  } catch {
-    // ignore
+  } catch (error) {
+    reportError('payments.api : savePaymentsToStorage', error);
   }
 }
 
@@ -67,13 +69,11 @@ export const paymentsApi = {
     return loadStoredPayments();
   },
 
-  async recordPayment(
-    data: Omit<Payment, 'id' | 'created_at'>
-  ): Promise<Payment> {
+  async recordPayment(data: Omit<Payment, 'id' | 'created_at'>): Promise<Payment> {
     const list = loadStoredPayments();
     const newPayment: Payment = {
       ...data,
-      id: `pay-${Date.now()}`,
+      id: `pay-${crypto.randomUUID()}`,
       created_at: new Date().toISOString(),
     };
     const nextList = [newPayment, ...list];

@@ -1,42 +1,224 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
+@theme {
+  --color-bts-blue-50: #edf4fb;
+  --color-bts-blue-100: #d7e6f6;
+  --color-bts-blue-200: #b4d1ee;
+  --color-bts-blue-300: #86b6e4;
+  --color-bts-blue-400: #5397d7;
+  --color-bts-blue-500: #2d79c6;
+  --color-bts-blue-600: #1c5faa;
+  --color-bts-blue-700: #144b88;
+  --color-bts-blue-800: #003366;
+  --color-bts-blue-900: #00254c;
+  --color-bts-blue-950: #001733;
   --color-bts-blue: #003366;
+
+  --color-bts-green-50: #edfbf3;
+  --color-bts-green-100: #d4f6e2;
+  --color-bts-green-200: #a8edc6;
+  --color-bts-green-300: #6ee0a3;
+  --color-bts-green-400: #35cb7c;
+  --color-bts-green-500: #16b060;
+  --color-bts-green-600: #058441;
+  --color-bts-green-700: #067039;
+  --color-bts-green-800: #095930;
+  --color-bts-green-900: #09492a;
+  --color-bts-green-950: #022915;
   --color-bts-green: #058441;
+
   --color-bts-dark: #1d1d1b;
+  --color-bts-dark-surface: #111b22;
+  --color-bts-dark-card: #16232d;
+  --color-bts-dark-muted: #64748b;
+
   --color-bts-canvas: #f6f8fa;
-  font-family: 'DM Sans', sans-serif;
-  color: #1d1d1b;
-  background: #f6f8fa;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+
+  --font-display: Montserrat, DM Sans, sans-serif;
+  --font-code: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Couleurs de Tailwind 3 pour les teintes utilisées par le site : la palette de Tailwind 4
+     est plus saturée, on garde exactement les couleurs d'origine. */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-indigo-800: #3730a3;
+  --color-indigo-900: #312e81;
+  --color-indigo-950: #1e1b4b;
+
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
+  --color-rose-700: #be123c;
+  --color-rose-800: #9f1239;
+  --color-rose-900: #881337;
+  --color-rose-950: #4c0519;
+
+  /* Hauteurs de ligne de Tailwind 3 (en rem) : un texte plus petit placé dans un bloc
+     hérite de la même hauteur de ligne qu'avant, au lieu d'un ratio. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  background: #f6f8fa;
-  color: #1d1d1b;
-  -webkit-font-smoothing: antialiased;
+/*
+  Styles de base du site. Ils sont placés dans la couche « base » de Tailwind :
+  les classes utilitaires (text-xs, bg-white…) restent prioritaires, comme avec Tailwind 3.
+*/
+@layer base {
+  /* Tailwind 4 utilise currentcolor comme couleur de bordure par défaut : on garde le gris clair. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Tailwind 4 rend le fond des champs transparent : on garde le fond blanc du navigateur. */
+  input,
+  textarea,
+  select {
+    background-color: #fff;
+  }
+
+  /* Couleur des textes indicatifs de Tailwind 3. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  /* Tailwind 4 ne met plus de curseur main sur les boutons : on le garde. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :root {
+    --color-bts-blue: #003366;
+    --color-bts-green: #058441;
+    --color-bts-dark: #1d1d1b;
+    --color-bts-canvas: #f6f8fa;
+    font-family: 'DM Sans', sans-serif;
+    color: #1d1d1b;
+    background: #f6f8fa;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: #f6f8fa;
+    color: #1d1d1b;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: #d4f6e2;
+    color: #058441;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
 }
 
-::selection {
-  background-color: #d4f6e2;
-  color: #058441;
-}
-
-button, input {
-  font: inherit;
-}
-
-* {
-  box-sizing: border-box;
-}
-
+/* Hors couche, volontairement : cette règle doit l'emporter sur les classes d'affichage. */
 @media (max-width: 800px) {
   .sidebar-label {
     display: none;

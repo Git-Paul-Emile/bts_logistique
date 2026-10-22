@@ -1,9 +1,11 @@
-import { FormEvent, useState } from 'react';
-import { Calculator } from 'lucide-react';
-import { Quote } from '@/types';
-import { formatPrice } from '@/utils/formatters';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import type { Quote } from '@/types';
+import { CUBIC_CM_PER_CUBIC_METER } from '@/utils/packagePricing';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { validateQuoteInput } from '@/utils/validators';
+import { QuoteSummaryPanel } from './QuoteSummaryPanel';
 
 interface CalculatorFormProps {
   coefficient: number;
@@ -11,11 +13,17 @@ interface CalculatorFormProps {
   onDone: () => void;
 }
 
-export function CalculatorForm({
-  coefficient,
-  onSave,
-  onDone,
-}: CalculatorFormProps) {
+/** Nom du champ du formulaire, puis nom de la donnée vérifiée par validateQuoteInput. */
+const FIELD_BY_KEY = {
+  recipient: 'recipient_name',
+  destination: 'destination',
+  length: 'length_cm',
+  width: 'width_cm',
+  height: 'height_cm',
+  weight: 'weight_kg',
+} as const;
+
+export function CalculatorForm({ coefficient, onSave, onDone }: CalculatorFormProps) {
   const [form, setForm] = useState({
     recipient: '',
     destination: '',
@@ -26,34 +34,34 @@ export function CalculatorForm({
   });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const numLength = Number(form.length) || 0;
   const numWidth = Number(form.width) || 0;
   const numHeight = Number(form.height) || 0;
   const numWeight = Number(form.weight) || 0;
 
-  const volume = (numLength * numWidth * numHeight) / 1000000;
+  const volume = (numLength * numWidth * numHeight) / CUBIC_CM_PER_CUBIC_METER;
   const price = volume * coefficient;
-
-  const isValid =
-    form.recipient.trim().length > 0 &&
-    form.destination.trim().length > 0 &&
-    numLength > 0 &&
-    numWidth > 0 &&
-    numHeight > 0 &&
-    numWeight > 0;
 
   const update = (key: keyof typeof form, value: string) => {
     setErrorMessage('');
+    setFieldErrors((current) => ({ ...current, [FIELD_BY_KEY[key]]: '' }));
     setForm((current) => ({ ...current, [key]: value }));
   };
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!isValid) {
-      setErrorMessage('Veuillez renseigner un destinataire et des dimensions positives.');
-      return;
-    }
+    const validation = validateQuoteInput({
+      recipient_name: form.recipient,
+      destination: form.destination,
+      length_cm: numLength,
+      width_cm: numWidth,
+      height_cm: numHeight,
+      weight_kg: numWeight,
+    });
+    setFieldErrors(validation.errors);
+    if (!validation.isValid) return;
 
     setSaving(true);
     try {
@@ -82,9 +90,10 @@ export function CalculatorForm({
     <div className="grid gap-6 lg:grid-cols-12">
       <form
         onSubmit={handleSubmit}
-        className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs sm:p-6 lg:col-span-7"
+        noValidate
+        className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 lg:col-span-7"
       >
-        <h3 className="mb-4 border-b border-slate-100 pb-3 font-['Space_Grotesk'] text-sm font-bold uppercase tracking-wider text-[#003366]">
+        <h3 className="mb-4 border-b border-slate-100 pb-3 font-['Space_Grotesk'] text-sm font-bold tracking-wider text-[#003366] uppercase">
           1. Informations de livraison
         </h3>
 
@@ -98,21 +107,21 @@ export function CalculatorForm({
           <Input
             label="Destinataire / Client"
             value={form.recipient}
+            error={fieldErrors.recipient_name}
             onChange={(e) => update('recipient', e.target.value)}
             placeholder="Ex : Société Commerciale d'Abidjan"
-            required
           />
 
           <Input
             label="Ville de destination"
             value={form.destination}
+            error={fieldErrors.destination}
             onChange={(e) => update('destination', e.target.value)}
             placeholder="Ex : Abidjan, Côte d'Ivoire"
-            required
           />
         </div>
 
-        <h3 className="mb-4 mt-6 border-b border-slate-100 pb-3 font-['Space_Grotesk'] text-sm font-bold uppercase tracking-wider text-[#003366]">
+        <h3 className="mt-6 mb-4 border-b border-slate-100 pb-3 font-['Space_Grotesk'] text-sm font-bold tracking-wider text-[#003366] uppercase">
           2. Caractéristiques du colis
         </h3>
 
@@ -120,26 +129,26 @@ export function CalculatorForm({
           <Input
             label="Longueur (cm)"
             type="number"
-            min="1"
+            inputMode="decimal"
             value={form.length}
+            error={fieldErrors.length_cm}
             onChange={(e) => update('length', e.target.value)}
-            required
           />
           <Input
             label="Largeur (cm)"
             type="number"
-            min="1"
+            inputMode="decimal"
             value={form.width}
+            error={fieldErrors.width_cm}
             onChange={(e) => update('width', e.target.value)}
-            required
           />
           <Input
             label="Hauteur (cm)"
             type="number"
-            min="1"
+            inputMode="decimal"
             value={form.height}
+            error={fieldErrors.height_cm}
             onChange={(e) => update('height', e.target.value)}
-            required
           />
         </div>
 
@@ -147,20 +156,15 @@ export function CalculatorForm({
           <Input
             label="Poids estimé (kg)"
             type="number"
-            min="0.1"
-            step="0.1"
+            inputMode="decimal"
             value={form.weight}
+            error={fieldErrors.weight_kg}
             onChange={(e) => update('weight', e.target.value)}
-            required
           />
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-          <Button
-            type="submit"
-            variant="secondary"
-            loading={saving}
-          >
+          <Button type="submit" variant="secondary" loading={saving}>
             Enregistrer la cotation
           </Button>
 
@@ -170,43 +174,12 @@ export function CalculatorForm({
         </div>
       </form>
 
-      {/* Volet récapitulatif en direct */}
-      <div className="lg:col-span-5">
-        <div className="sticky top-24 rounded-lg border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3 font-['Space_Grotesk'] text-sm font-bold text-[#003366]">
-            <Calculator size={18} />
-            <span>Synthèse volumétrique en direct</span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Volume unitaire :</span>
-              <span className="font-semibold text-slate-800">{volume.toFixed(3)} m³</span>
-            </div>
-
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Coefficient appliqué :</span>
-              <span className="font-semibold text-slate-800">{coefficient.toFixed(2)} F CFA/m³</span>
-            </div>
-
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Poids renseigné :</span>
-              <span className="font-semibold text-slate-800">{numWeight > 0 ? `${numWeight} kg` : '-'}</span>
-            </div>
-
-            <div className="my-2 border-t border-slate-100 pt-3">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Prix estimé
-                </span>
-                <span className="font-['Space_Grotesk'] text-2xl font-bold text-[#003366]">
-                  {formatPrice(price)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <QuoteSummaryPanel
+        volume={volume}
+        coefficient={coefficient}
+        weight={numWeight}
+        price={price}
+      />
     </div>
   );
 }

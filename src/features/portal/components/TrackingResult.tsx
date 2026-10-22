@@ -1,5 +1,6 @@
 import { AlertCircle, Check, MapPin, Printer } from 'lucide-react';
-import { Package, PACKAGE_STATUS_LABELS } from '@/types';
+import type { Package } from '@/types';
+import { PACKAGE_STATUS_LABELS } from '@/types';
 import { formatDate, formatDateTime, formatVolume } from '@/utils/formatters';
 import { TRACKING_STEPS } from '../portal.content';
 import { getTrackingStep } from '../hooks/usePackageTracking';
@@ -23,7 +24,8 @@ function NotFound({ code }: { code: string }) {
       <AlertCircle size={24} aria-hidden="true" className="mt-0.5 shrink-0 text-red-600" />
       <div>
         <p className="font-display text-base font-bold text-bts-dark">
-          Aucun colis ne correspond au numéro <span className="font-code">{code.toUpperCase()}</span>
+          Aucun colis ne correspond au numéro{' '}
+          <span className="font-code">{code.toUpperCase()}</span>
         </p>
         <p className="mt-1 text-sm text-slate-700">
           Vérifiez chaque caractère du numéro inscrit sur votre reçu. Si le problème persiste,
@@ -45,7 +47,7 @@ function PackageDetails({ pkg }: { pkg: Package }) {
   ];
 
   return (
-    <article className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+    <article className="overflow-hidden rounded-lg bg-white shadow-xs ring-1 ring-slate-200">
       <header className="flex flex-col gap-4 bg-bts-blue-950 p-6 text-white sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold text-bts-green-400">Numéro de suivi</p>
@@ -70,10 +72,16 @@ function PackageDetails({ pkg }: { pkg: Package }) {
         </div>
       </header>
 
-      <div className="px-6 pb-2 pt-8">
+      <div className="px-6 pt-8 pb-2">
         <div className="relative">
-          <div className="absolute left-[12.5%] right-[12.5%] top-[15px] h-1 rounded bg-slate-200" aria-hidden="true">
-            <div className="h-full rounded bg-bts-green" style={{ width: `${progressPercent}%` }} />
+          <div
+            className="absolute top-[15px] right-[12.5%] left-[12.5%] h-1 rounded-sm bg-slate-200"
+            aria-hidden="true"
+          >
+            <div
+              className="h-full rounded-sm bg-bts-green"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
           <ol className="relative grid grid-cols-4">
             {TRACKING_STEPS.map((step, index) => {
@@ -88,12 +96,16 @@ function PackageDetails({ pkg }: { pkg: Package }) {
                 >
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                      isDone ? 'bg-bts-green text-white' : 'border-2 border-slate-300 bg-white text-slate-500'
+                      isDone
+                        ? 'bg-bts-green text-white'
+                        : 'border-2 border-slate-300 bg-white text-slate-500'
                     } ${isCurrent ? 'ring-4 ring-bts-green-100' : ''}`}
                   >
                     {isDone ? <Check size={16} aria-hidden="true" /> : stepNumber}
                   </span>
-                  <span className={`mt-2 text-xs sm:text-sm ${isDone ? 'font-semibold text-bts-blue' : 'text-slate-500'}`}>
+                  <span
+                    className={`mt-2 text-xs sm:text-sm ${isDone ? 'font-semibold text-bts-blue' : 'text-slate-500'}`}
+                  >
                     {step.label}
                     {isDone && <span className="sr-only"> (étape franchie)</span>}
                   </span>
@@ -114,13 +126,15 @@ function PackageDetails({ pkg }: { pkg: Package }) {
       </dl>
 
       <div className="p-6">
-        <h4 className="font-display text-base font-bold text-bts-blue">Historique d’acheminement</h4>
+        <h4 className="font-display text-base font-bold text-bts-blue">
+          Historique d’acheminement
+        </h4>
         {pkg.events && pkg.events.length > 0 ? (
           <ol className="mt-4 border-l-2 border-slate-200 pl-6">
             {pkg.events.map((event, index) => (
               <li key={event.id} className="relative pb-5 last:pb-0">
                 <span
-                  className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-white ${
+                  className={`absolute top-1 left-[-31px] h-3 w-3 rounded-full ring-4 ring-white ${
                     index === 0 ? 'bg-bts-green' : 'bg-slate-300'
                   }`}
                   aria-hidden="true"

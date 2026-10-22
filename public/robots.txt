@@ -1,0 +1,7 @@
+# Les pages privées et de connexion ne doivent pas apparaître dans les moteurs de recherche.
+User-agent: *
+Disallow: /admin
+Disallow: /connexion
+Disallow: /mot-de-passe-oublie
+Disallow: /reinitialiser-mot-de-passe
+Disallow: /suivi/

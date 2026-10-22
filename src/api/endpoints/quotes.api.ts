@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase';
-import { Quote } from '@/types';
+import type { Quote } from '@/types';
+import { reportError } from '@/lib/reportError';
+
+/** Prix du m³ utilisé tant que le réglage enregistré n'est pas disponible. */
+export const DEFAULT_PRICING_COEFFICIENT = 8.5;
 
 export const fallbackQuotes: Quote[] = [
   {
@@ -11,7 +15,7 @@ export const fallbackQuotes: Quote[] = [
     height_cm: 55,
     weight_kg: 32,
     cubic_meter: 0.264,
-    coefficient: 8.5,
+    coefficient: DEFAULT_PRICING_COEFFICIENT,
     final_price: 24.8,
     created_at: '2026-10-04T09:30:00Z',
   },
@@ -24,7 +28,7 @@ export const fallbackQuotes: Quote[] = [
     height_cm: 65,
     weight_kg: 48,
     cubic_meter: 0.624,
-    coefficient: 8.5,
+    coefficient: DEFAULT_PRICING_COEFFICIENT,
     final_price: 41.2,
     created_at: '2026-10-03T14:20:00Z',
   },
@@ -37,7 +41,7 @@ export const fallbackQuotes: Quote[] = [
     height_cm: 35,
     weight_kg: 12,
     cubic_meter: 0.063,
-    coefficient: 8.5,
+    coefficient: DEFAULT_PRICING_COEFFICIENT,
     final_price: 12.9,
     created_at: '2026-10-02T11:15:00Z',
   },
@@ -53,9 +57,11 @@ export const quotesApi = {
         .order('created_at', { ascending: false })
         .limit(50);
 
+      if (error) reportError('quotes.api : getQuotes', error);
       if (error || !data || data.length === 0) return fallbackQuotes;
       return data as Quote[];
-    } catch {
+    } catch (error) {
+      reportError('quotes.api : getQuotes', error);
       return fallbackQuotes;
     }
   },
@@ -68,13 +74,14 @@ export const quotesApi = {
         .insert({ ...quote, id: undefined });
 
       return !error;
-    } catch {
+    } catch (error) {
+      reportError('quotes.api : createQuote', error);
       return false;
     }
   },
 
   async getPricingCoefficient(): Promise<number> {
-    if (!supabase) return 8.5;
+    if (!supabase) return DEFAULT_PRICING_COEFFICIENT;
     try {
       const { data, error } = await supabase
         .from('pricing_settings')
@@ -82,10 +89,12 @@ export const quotesApi = {
         .eq('id', 1)
         .maybeSingle();
 
-      if (error || !data) return 8.5;
-      return Number(data.coefficient) || 8.5;
-    } catch {
-      return 8.5;
+      if (error) reportError('quotes.api : getPricingCoefficient', error);
+      if (error || !data) return DEFAULT_PRICING_COEFFICIENT;
+      return Number(data.coefficient) || DEFAULT_PRICING_COEFFICIENT;
+    } catch (error) {
+      reportError('quotes.api : getPricingCoefficient', error);
+      return DEFAULT_PRICING_COEFFICIENT;
     }
   },
 
@@ -97,7 +106,8 @@ export const quotesApi = {
         .upsert({ id: 1, coefficient, updated_at: new Date().toISOString() });
 
       return !error;
-    } catch {
+    } catch (error) {
+      reportError('quotes.api : updatePricingCoefficient', error);
       return false;
     }
   },

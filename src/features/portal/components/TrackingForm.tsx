@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
 import { Search } from 'lucide-react';
 
 interface TrackingFormProps {
@@ -32,7 +33,11 @@ export function TrackingForm({ initialValue = '', onSubmit, loading = false }: T
       </label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
-          <Search size={18} aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search
+            size={18}
+            aria-hidden="true"
+            className="absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400"
+          />
           <input
             id={TRACKING_INPUT_ID}
             type="text"
@@ -46,13 +51,13 @@ export function TrackingForm({ initialValue = '', onSubmit, loading = false }: T
             placeholder="BTS-CI-2026-0089"
             aria-invalid={Boolean(error)}
             aria-describedby={error ? TRACKING_ERROR_ID : undefined}
-            className="h-12 w-full rounded-md border border-slate-300 pl-10 pr-3 font-code text-sm uppercase text-bts-dark placeholder:normal-case placeholder:text-slate-400 focus:border-bts-blue focus:outline-none focus:ring-2 focus:ring-bts-blue/20 aria-[invalid=true]:border-red-500"
+            className="h-12 w-full rounded-md border border-slate-300 pr-3 pl-10 font-code text-sm text-bts-dark uppercase placeholder:text-slate-400 placeholder:normal-case focus:border-bts-blue focus:ring-2 focus:ring-bts-blue/20 focus:outline-hidden aria-invalid:border-red-500"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="h-12 rounded-md bg-bts-green px-6 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bts-green disabled:opacity-70"
+          className="h-12 rounded-md bg-bts-green px-6 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bts-green focus-visible:outline-solid disabled:opacity-70"
         >
           {loading ? 'Recherche en cours...' : 'Suivre mon colis'}
         </button>

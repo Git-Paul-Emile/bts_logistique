@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { Quote } from '@/types';
+import type { Quote } from '@/types';
 import { formatDate, formatPrice } from '@/utils/formatters';
 
 interface RecentQuotesProps {
@@ -18,25 +18,23 @@ export function RecentQuotes({
   onNewCalculation,
 }: RecentQuotesProps) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
         <div>
           <h3 className="font-['Space_Grotesk'] text-base font-bold text-[#003366]">
             Dernières opérations enregistrées
           </h3>
-          <p className="text-xs text-slate-500">
-            Aperçu des 5 expéditions les plus récentes.
-          </p>
+          <p className="text-xs text-slate-500">Aperçu des 5 expéditions les plus récentes.</p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs">
-            <Search size={14} className="text-slate-400 shrink-0" />
+            <Search size={14} className="shrink-0 text-slate-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filtrer client ou ville..."
-              className="w-36 bg-transparent outline-none placeholder:text-slate-400 sm:w-48"
+              className="w-36 bg-transparent outline-hidden placeholder:text-slate-400 sm:w-48"
             />
           </div>
 
@@ -57,25 +55,18 @@ export function RecentQuotes({
         ) : (
           <div className="divide-y divide-slate-100">
             {quotes.slice(0, 5).map((quote) => (
-              <div
-                key={quote.id}
-                className="flex items-center justify-between py-3 text-xs"
-              >
+              <div key={quote.id} className="flex items-center justify-between py-3 text-xs">
                 <div className="min-w-0 pr-4">
-                  <p className="font-semibold text-slate-800 truncate">
-                    {quote.recipient_name}
-                  </p>
-                  <p className="text-slate-500 truncate">
+                  <p className="truncate font-semibold text-slate-800">{quote.recipient_name}</p>
+                  <p className="truncate text-slate-500">
                     {quote.destination} • {quote.cubic_meter.toFixed(3)} m³ • {quote.weight_kg} kg
                   </p>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="shrink-0 text-right">
                   <p className="font-['Space_Grotesk'] text-sm font-bold text-[#003366]">
                     {formatPrice(quote.final_price)}
                   </p>
-                  <p className="text-[11px] text-slate-400">
-                    {formatDate(quote.created_at)}
-                  </p>
+                  <p className="text-[11px] text-slate-400">{formatDate(quote.created_at)}</p>
                 </div>
               </div>
             ))}

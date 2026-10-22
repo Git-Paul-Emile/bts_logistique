@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { trackingPath } from '@/router/paths';
 import { SectionHeading } from './SectionHeading';
 import { TrackingForm } from './TrackingForm';
@@ -9,7 +9,7 @@ export function TrackingSection() {
   return (
     <section id="suivi" className="scroll-mt-20 bg-white py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-8 rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-10 lg:grid-cols-2 lg:items-end lg:gap-12">
+        <div className="grid gap-8 rounded-lg bg-white p-6 shadow-xs ring-1 ring-slate-200 sm:p-10 lg:grid-cols-2 lg:items-end lg:gap-12">
           <SectionHeading
             title="Où se trouve"
             highlight="votre colis ?"

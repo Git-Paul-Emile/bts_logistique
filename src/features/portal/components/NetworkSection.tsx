@@ -29,11 +29,13 @@ export function NetworkSection() {
 
         <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {WAREHOUSES.map((warehouse) => (
-            <li key={warehouse.city} className="rounded-lg bg-white/[0.05] p-5">
+            <li key={warehouse.city} className="rounded-lg bg-white/5 p-5">
               <h3 className="font-display text-lg font-bold">{warehouse.city}</h3>
               <p className="text-sm text-white/60">{warehouse.country}</p>
               <p className="mt-3 text-sm font-semibold text-bts-green-400">{warehouse.role}</p>
-              <address className="mt-1 text-sm not-italic text-white/75">{warehouse.address}</address>
+              <address className="mt-1 text-sm text-white/75 not-italic">
+                {warehouse.address}
+              </address>
             </li>
           ))}
         </ul>
@@ -45,13 +47,13 @@ export function NetworkSection() {
 const COUNT_UP_DURATION_MS = 1200;
 
 function NetworkFact({ label, value }: { label: string; value: number }) {
-  const counter = useCountUp<HTMLElement>(value, COUNT_UP_DURATION_MS);
+  const { ref, value: displayedValue } = useCountUp<HTMLElement>(value, COUNT_UP_DURATION_MS);
 
   return (
     <div className="flex flex-col px-4 py-2 first:pl-0">
       <dt className="text-xs text-white/70 sm:text-sm">{label}</dt>
-      <dd ref={counter.ref} className="order-first font-display text-4xl font-extrabold text-bts-green-400">
-        <span aria-hidden="true">{counter.value}</span>
+      <dd ref={ref} className="order-first font-display text-4xl font-extrabold text-bts-green-400">
+        <span aria-hidden="true">{displayedValue}</span>
         <span className="sr-only">{value}</span>
       </dd>
     </div>

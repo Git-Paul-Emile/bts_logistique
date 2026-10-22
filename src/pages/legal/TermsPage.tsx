@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { CONTACT } from '@/features/portal/portal.content';
 import { PATHS } from '@/router/paths';
 import { LegalLayout } from './LegalLayout';
@@ -7,7 +7,11 @@ const LAST_UPDATE = '2026-10-19';
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Conditions générales d’utilisation" updatedAt={LAST_UPDATE}>
+    <LegalLayout
+      title="Conditions générales d’utilisation"
+      updatedAt={LAST_UPDATE}
+      description="Conditions d’utilisation du site BTS Logistique : simulateur de prix, suivi de colis et espace de gestion."
+    >
       <section>
         <h2>Objet</h2>
         <p>
@@ -21,7 +25,10 @@ export function TermsPage() {
         <h2>Éditeur</h2>
         <p>
           BTS Logistique, {CONTACT.address}. Téléphone : {CONTACT.phoneDisplay}. E-mail :{' '}
-          <a className="text-bts-blue underline" href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>.
+          <a className="text-bts-blue underline" href={`mailto:${CONTACT.email}`}>
+            {CONTACT.email}
+          </a>
+          .
         </p>
       </section>
 

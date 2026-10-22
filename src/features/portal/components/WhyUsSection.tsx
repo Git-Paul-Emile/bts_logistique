@@ -31,7 +31,7 @@ export function WhyUsSection() {
         </div>
 
         {/* Marge de 15 % en haut et en bas : couvre le décalage maximal de la parallaxe. */}
-        <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-bts-blue-950">
+        <div className="relative aspect-4/3 overflow-hidden rounded-lg bg-bts-blue-950">
           <img
             ref={imageRef}
             src={PORTAL_IMAGES.whyUs}
@@ -39,7 +39,7 @@ export function WhyUsSection() {
             width={1122}
             height={1402}
             loading="lazy"
-            className="absolute inset-x-0 -top-[15%] h-[130%] w-full object-cover will-change-transform"
+            className="absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover will-change-transform"
           />
         </div>
       </div>

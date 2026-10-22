@@ -1,6 +1,7 @@
-import { useEffect, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/classNames';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -74,13 +75,11 @@ export function Modal({
             >
               {title}
             </h3>
-            {description && (
-              <p className="mt-0.5 text-xs text-slate-500">{description}</p>
-            )}
+            {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none"
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-hidden"
             aria-label="Fermer la boîte de dialogue"
           >
             <X size={18} />

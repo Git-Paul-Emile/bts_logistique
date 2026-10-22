@@ -1,9 +1,10 @@
-import { FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Client, ClientUpdateInput } from '@/types';
-import { isValidEmail } from '@/utils/validators';
+import type { Client, ClientUpdateInput } from '@/types';
+import { CLIENT_ERRORS, isValidEmail, isValidPhone, validateClientInput } from '@/utils/validators';
 
 interface EditClientModalProps {
   client: Client;
@@ -13,8 +14,6 @@ interface EditClientModalProps {
 }
 
 type FieldErrors = Partial<Record<keyof ClientUpdateInput, string>>;
-
-const EMAIL_ERROR = 'Saisissez une adresse e-mail complète, par exemple nom@exemple.com, ou laissez le champ vide.';
 
 export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientModalProps) {
   const [values, setValues] = useState<ClientUpdateInput>({
@@ -33,12 +32,9 @@ export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientM
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const nextErrors: FieldErrors = {};
-    if (!values.name.trim()) nextErrors.name = 'Saisissez le nom du client ou de la société.';
-    if (!values.phone.trim()) nextErrors.phone = 'Saisissez un numéro de téléphone pour joindre le client.';
-    if (values.email && !isValidEmail(values.email)) nextErrors.email = EMAIL_ERROR;
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
+    const validation = validateClientInput(values);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
     setSaving(true);
@@ -51,10 +47,34 @@ export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientM
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Modifier le client" description="L’adresse e-mail sert à envoyer les notifications de suivi." maxWidth="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Modifier le client"
+      description="L’adresse e-mail sert à envoyer les notifications de suivi."
+      maxWidth="lg"
+    >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <Input id="client-name" label="Nom ou raison sociale" value={values.name} error={errors.name} onChange={(event) => update('name', event.target.value)} />
-        <Input id="client-phone" label="Téléphone" type="tel" value={values.phone} error={errors.phone} onChange={(event) => update('phone', event.target.value)} />
+        <Input
+          id="client-name"
+          label="Nom ou raison sociale"
+          value={values.name}
+          error={errors.name}
+          onChange={(event) => update('name', event.target.value)}
+        />
+        <Input
+          id="client-phone"
+          label="Téléphone"
+          type="tel"
+          value={values.phone}
+          error={errors.phone}
+          onChange={(event) => update('phone', event.target.value)}
+          onBlur={() =>
+            values.phone.trim() &&
+            !isValidPhone(values.phone) &&
+            setErrors((previous) => ({ ...previous, phone: CLIENT_ERRORS.phoneInvalid }))
+          }
+        />
         <Input
           id="client-email"
           label="Adresse e-mail (facultatif)"
@@ -62,12 +82,25 @@ export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientM
           value={values.email}
           error={errors.email}
           onChange={(event) => update('email', event.target.value)}
-          onBlur={() => values.email && !isValidEmail(values.email) && setErrors((previous) => ({ ...previous, email: EMAIL_ERROR }))}
+          onBlur={() =>
+            values.email &&
+            !isValidEmail(values.email) &&
+            setErrors((previous) => ({ ...previous, email: CLIENT_ERRORS.emailInvalid }))
+          }
         />
-        <Input id="client-address" label="Adresse (facultatif)" value={values.address} onChange={(event) => update('address', event.target.value)} />
+        <Input
+          id="client-address"
+          label="Adresse (facultatif)"
+          value={values.address}
+          onChange={(event) => update('address', event.target.value)}
+        />
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={saving}>Enregistrer</Button>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" loading={saving}>
+            Enregistrer
+          </Button>
         </div>
       </form>
     </Modal>

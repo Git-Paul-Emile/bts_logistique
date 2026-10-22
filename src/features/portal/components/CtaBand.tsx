@@ -7,11 +7,12 @@ export function CtaBand() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="rounded-lg bg-bts-green p-8 text-white sm:p-12 lg:flex lg:items-center lg:justify-between lg:gap-12">
           <div>
-            <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl">
+            <h2 className="font-display text-3xl leading-tight font-bold sm:text-4xl sm:leading-10">
               Une marchandise à faire venir ?
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-white/90">
-              Indiquez-nous le volume, l’origine et la ville de livraison. Nous vous envoyons un devis.
+              Indiquez-nous le volume, l’origine et la ville de livraison. Nous vous envoyons un
+              devis.
             </p>
           </div>
           <div className="mt-8 flex flex-wrap gap-3 lg:mt-0 lg:shrink-0">

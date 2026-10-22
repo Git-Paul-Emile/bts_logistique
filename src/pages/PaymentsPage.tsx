@@ -1,10 +1,25 @@
 import { useState, useMemo } from 'react';
-import { Payment, Package, PAYMENT_METHOD_LABELS, PaymentMethod } from '@/types';
+import type { Payment, Package, PaymentMethod } from '@/types';
+import { PAYMENT_METHOD_LABELS } from '@/types';
 import { formatPrice, formatDateTime } from '@/utils/formatters';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { CreditCard, Search, PlusCircle, Printer, CheckCircle, TrendingUp, AlertCircle, DollarSign } from 'lucide-react';
+import { PaymentReceiptModal } from '@/features/payments/components/PaymentReceiptModal';
+import { Printer, Search } from 'lucide-react';
+import { PaymentStats } from '@/features/payments/components/PaymentStats';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { ImportExcelButton } from '@/features/import/components/ImportExcelButton';
+import type { PaymentImportItem } from '@/features/import/definitions/payments.import';
+import {
+  paymentImportContext,
+  paymentsImport,
+} from '@/features/import/definitions/payments.import';
+import type { ImportBatch } from '@/features/import/importTypes';
+
+const METHOD_FILTER_OPTIONS = [
+  { value: 'all', label: 'Tous les modes' },
+  { value: 'mobile_money', label: 'Mobile Money (Wave/Orange)' },
+  { value: 'cash', label: 'Espèces' },
+  { value: 'transfer', label: 'Virement bancaire' },
+];
 
 interface PaymentsPageProps {
   payments: Payment[];
@@ -15,22 +30,13 @@ interface PaymentsPageProps {
     method: PaymentMethod,
     reference?: string
   ) => Promise<void>;
+  onImportPayments: (batch: ImportBatch<PaymentImportItem, never>) => Promise<void>;
 }
 
-export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPageProps) {
+export function PaymentsPage({ payments, packages, onImportPayments }: PaymentsPageProps) {
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [selectedReceiptPayment, setSelectedReceiptPayment] = useState<Payment | null>(null);
-
-  // Financial KPIs
-  const financialStats = useMemo(() => {
-    const totalBilled = packages.reduce((acc, p) => acc + p.final_price, 0);
-    const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
-    const pendingRecovery = Math.max(0, totalBilled - totalCollected);
-    const recoveryRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 100;
-
-    return { totalBilled, totalCollected, pendingRecovery, recoveryRate };
-  }, [packages, payments]);
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
@@ -58,89 +64,51 @@ export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPa
             Journal des encaissements, suivi des impayés et émission des reçus officiels BTS.
           </p>
         </div>
+        <ImportExcelButton
+          definition={paymentsImport}
+          getContext={() => paymentImportContext(packages)}
+          onImport={onImportPayments}
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
-            <span>Total Encaissé</span>
-            <CheckCircle size={18} className="text-emerald-500" />
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-emerald-600">
-            {formatPrice(financialStats.totalCollected)}
-          </p>
-          <span className="text-[11px] text-slate-400 mt-1 block">
-            Taux de recouvrement : {financialStats.recoveryRate}%
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
-            <span>Reste à Recouvrer</span>
-            <AlertCircle size={18} className="text-amber-500" />
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-amber-600">
-            {formatPrice(financialStats.pendingRecovery)}
-          </p>
-          <span className="text-[11px] text-slate-400 mt-1 block">Créances clients en cours</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
-            <span>Chiffre d'Affaires</span>
-            <TrendingUp size={18} className="text-[#003366]" />
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-slate-800">
-            {formatPrice(financialStats.totalBilled)}
-          </p>
-          <span className="text-[11px] text-slate-400 mt-1 block">Volume facturé cumulé</span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
-            <span>Transactions</span>
-            <DollarSign size={18} className="text-indigo-500" />
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-indigo-700">{payments.length}</p>
-          <span className="text-[11px] text-slate-400 mt-1 block">Reçus délivrés</span>
-        </div>
-      </div>
+      <PaymentStats packages={packages} payments={payments} />
 
       {/* Filter and Search Bar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="relative flex-1">
-            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search
+              size={18}
+              className="absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400"
+            />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher par référence, N° de suivi, client..."
-              className="w-full rounded-lg border border-slate-300 py-2 pl-10 pr-4 text-sm focus:border-[#003366] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 py-2 pr-4 pl-10 text-sm focus:border-[#003366] focus:outline-hidden"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-[#003366] focus:outline-none"
-            >
-              <option value="all">Tous les modes</option>
-              <option value="mobile_money">Mobile Money (Wave/Orange)</option>
-              <option value="cash">Espèces</option>
-              <option value="transfer">Virement bancaire</option>
-            </select>
+            <div className="w-56">
+              <SearchableSelect
+                size="sm"
+                aria-label="Filtrer par mode de règlement"
+                value={methodFilter}
+                onChange={setMethodFilter}
+                options={METHOD_FILTER_OPTIONS}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Payments Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
               <tr>
                 <th className="px-5 py-3.5">Date & Heure</th>
                 <th className="px-5 py-3.5">Référence / Reçu</th>
@@ -152,17 +120,19 @@ export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPa
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredPayments.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/80 transition">
+                <tr key={p.id} className="transition hover:bg-slate-50/80">
                   <td className="px-5 py-3.5 text-xs text-slate-600">
                     {formatDateTime(p.created_at)}
                   </td>
 
-                  <td className="px-5 py-3.5 font-mono font-bold text-xs text-slate-800">
+                  <td className="px-5 py-3.5 font-mono text-xs font-bold text-slate-800">
                     {p.reference || p.id}
                   </td>
 
                   <td className="px-5 py-3.5">
-                    <p className="font-semibold text-slate-800 text-xs">{p.client_name || 'Client comptoir'}</p>
+                    <p className="text-xs font-semibold text-slate-800">
+                      {p.client_name || 'Client comptoir'}
+                    </p>
                     {p.tracking_number && (
                       <p className="font-mono text-[11px] text-[#003366]">{p.tracking_number}</p>
                     )}
@@ -174,7 +144,7 @@ export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPa
                     </span>
                   </td>
 
-                  <td className="px-5 py-3.5 text-right font-extrabold text-emerald-600 text-sm">
+                  <td className="px-5 py-3.5 text-right text-sm font-extrabold text-emerald-600">
                     {formatPrice(p.amount)}
                   </td>
 
@@ -182,7 +152,7 @@ export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPa
                     <button
                       onClick={() => setSelectedReceiptPayment(p)}
                       title="Imprimer le reçu de paiement"
-                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      className="rounded-sm p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                     >
                       <Printer size={16} />
                     </button>
@@ -194,71 +164,11 @@ export function PaymentsPage({ payments, packages, onRecordPayment }: PaymentsPa
         </div>
       </div>
 
-      {/* Reçu officiel Modal (G15) */}
       {selectedReceiptPayment && (
-        <Modal
-          isOpen={Boolean(selectedReceiptPayment)}
+        <PaymentReceiptModal
+          payment={selectedReceiptPayment}
           onClose={() => setSelectedReceiptPayment(null)}
-          title="Reçu officiel d'encaissement BTS Logistique"
-          maxWidth="md"
-        >
-          <div className="space-y-4">
-            <div className="rounded-xl border border-dashed border-slate-300 p-5 bg-white text-xs space-y-3">
-              <div className="text-center border-b pb-3">
-                <h3 className="font-bold text-base text-[#002244]">BTS LOGISTIQUE</h3>
-                <p className="text-[10px] text-slate-500">Service Caisse & Facturation</p>
-                <p className="font-mono font-bold text-xs text-slate-700 mt-1">
-                  N° Reçu : {selectedReceiptPayment.reference || selectedReceiptPayment.id}
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Date :</span>
-                  <span className="font-medium text-slate-800">{formatDateTime(selectedReceiptPayment.created_at)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Client :</span>
-                  <span className="font-semibold text-slate-800">{selectedReceiptPayment.client_name}</span>
-                </div>
-                {selectedReceiptPayment.tracking_number && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Colis lié :</span>
-                    <span className="font-mono font-bold text-[#003366]">{selectedReceiptPayment.tracking_number}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Mode de paiement :</span>
-                  <span className="font-medium text-slate-800">{PAYMENT_METHOD_LABELS[selectedReceiptPayment.payment_method]}</span>
-                </div>
-              </div>
-
-              <div className="border-t pt-3 flex items-center justify-between rounded bg-emerald-50 p-3">
-                <span className="font-bold uppercase text-[11px] text-emerald-800">Montant Encaissé</span>
-                <span className="text-lg font-extrabold text-emerald-700">{formatPrice(selectedReceiptPayment.amount)}</span>
-              </div>
-
-              {selectedReceiptPayment.notes && (
-                <p className="text-[11px] text-slate-500 italic mt-2">
-                  Note : {selectedReceiptPayment.notes}
-                </p>
-              )}
-
-              <div className="text-center pt-2 text-[10px] text-slate-400">
-                Merci de votre confiance. Pour tout renseignement : contact@bts-logistique.com
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSelectedReceiptPayment(null)}>
-                Fermer
-              </Button>
-              <Button variant="primary" onClick={() => window.print()} className="gap-2">
-                <Printer size={16} /> Imprimer
-              </Button>
-            </div>
-          </div>
-        </Modal>
+        />
       )}
     </div>
   );

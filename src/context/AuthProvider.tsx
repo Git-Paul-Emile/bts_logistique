@@ -1,27 +1,14 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from 'react';
-import { UserSession } from '@/types';
+import type { ReactNode } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { ProfileUpdateInput, UserSession } from '@/types';
+import { AuthContext } from './AuthContext';
 import { authApi, AUTH_TOKEN_KEY } from '@/api/endpoints/auth.api';
-
-interface AuthContextType {
-  user: UserSession | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { reportError } from '@/lib/reportError';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
 
   useEffect(() => {
     async function initAuth() {
@@ -29,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await authApi.getCurrentUser();
         setUser(currentUser);
       } catch (err) {
-        console.error('Failed to load current user', err);
+        reportError('Impossible de charger l’utilisateur connecté', err);
       } finally {
         setIsLoading(false);
       }
@@ -41,12 +28,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await authApi.login({ email, password: '' });
+      setSignOutNotice(null);
       setUser(response.user);
       localStorage.setItem(AUTH_TOKEN_KEY, response.token);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const updateProfile = useCallback(
+    async (changes: ProfileUpdateInput) => {
+      if (!user) return;
+      setUser(await authApi.updateProfile(user.id, changes));
+    },
+    [user]
+  );
+
+  const deleteAccount = useCallback(
+    async (password: string) => {
+      if (!user) return;
+      await authApi.deleteOwnAccount(user.id, password);
+      setSignOutNotice('Votre compte a été supprimé.');
+      setUser(null);
+    },
+    [user]
+  );
 
   const logout = useCallback(async () => {
     setIsLoading(true);
@@ -66,17 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        updateProfile,
+        deleteAccount,
+        signOutNotice,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

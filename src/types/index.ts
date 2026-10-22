@@ -11,17 +11,12 @@ export type View =
   | 'history'
   | 'settings'
   | 'users'
-  | 'notifications';
+  | 'notifications'
+  | 'profile';
 
 // ─── Package statuses ────────────────────────────────────────────────────────
 export type PackageStatus =
-  | 'registered'
-  | 'in_transit'
-  | 'arrived'
-  | 'delivered'
-  | 'returned'
-  | 'on_hold'
-  | 'cancelled';
+  'registered' | 'in_transit' | 'arrived' | 'delivered' | 'returned' | 'on_hold' | 'cancelled';
 
 export const PACKAGE_STATUS_LABELS: Record<PackageStatus, string> = {
   registered: 'Enregistré',
@@ -51,12 +46,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 
 // ─── Shipment / Container statuses ───────────────────────────────────────────
 export type ShipmentStatus =
-  | 'planned'
-  | 'loading'
-  | 'in_transit'
-  | 'customs'
-  | 'arrived'
-  | 'unloaded';
+  'planned' | 'loading' | 'in_transit' | 'customs' | 'arrived' | 'unloaded';
 
 export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
   planned: 'Planifié',
@@ -93,6 +83,10 @@ export interface Package {
   cubic_meter: number;
   coefficient: number;
   final_price: number;
+  /** Absent sur les colis créés avant l'ajout du mode : ils sont traités comme maritimes. */
+  transport_mode?: TransportMode;
+  /** Marge collecteur figée à l'enregistrement, en F CFA, comprise dans final_price. */
+  collector_margin?: number;
   status: PackageStatus;
   payment_status: PaymentStatus;
   amount_paid: number;
@@ -104,7 +98,14 @@ export interface Package {
 /** Champs modifiables après l'enregistrement. Le volume et le prix sont recalculés. */
 export type PackageUpdateInput = Pick<
   Package,
-  'description' | 'origin' | 'destination' | 'length_cm' | 'width_cm' | 'height_cm' | 'weight_kg' | 'coefficient'
+  | 'description'
+  | 'origin'
+  | 'destination'
+  | 'length_cm'
+  | 'width_cm'
+  | 'height_cm'
+  | 'weight_kg'
+  | 'coefficient'
 >;
 
 export type StatusUpdateHandler = (
@@ -175,14 +176,12 @@ export interface PricingSettings {
   updated_at?: string;
 }
 
-export interface UserSession {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+/** Personne connectée : son compte, sans les champs d'administration. */
+export interface UserSession extends Omit<AppUser, 'active' | 'created_at' | 'archived_at'> {
   initials: string;
 }
 
+export type ProfileUpdateInput = Pick<AppUser, 'name' | 'email' | 'phone'>;
 
 // ─── Shipment / Container (Groupage) ─────────────────────────────────────────
 export interface Shipment {
@@ -203,7 +202,7 @@ export interface Shipment {
   created_at: string;
 }
 
-export const BTS_ORIGINS = [
+export const BTS_ORIGINS: readonly [string, ...string[]] = [
   'Guangzhou (Chine)',
   'Yiwu (Chine)',
   'Dubaï (EAU)',
@@ -211,8 +210,8 @@ export const BTS_ORIGINS = [
   'Paris / Le Havre (France)',
 ];
 
-export const BTS_DESTINATIONS = [
-  'Abidjan (Côte d\'Ivoire)',
+export const BTS_DESTINATIONS: readonly [string, ...string[]] = [
+  "Abidjan (Côte d'Ivoire)",
   'Dakar (Sénégal)',
   'Bamako (Mali)',
   'Ouagadougou (Burkina Faso)',
@@ -220,7 +219,6 @@ export const BTS_DESTINATIONS = [
   'Lomé (Togo)',
   'Cotonou (Bénin)',
 ];
-
 
 // ─── Pricing grid ────────────────────────────────────────────────────────────
 export type TransportMode = 'sea' | 'air';
@@ -268,11 +266,24 @@ export interface AppUser {
   agency: string;
   active: boolean;
   created_at: string;
+  /**
+   * Renseigné quand la personne a supprimé son compte. Le compte n'est jamais effacé :
+   * les colis et paiements qui y sont liés restent rattachés, et un administrateur peut le restaurer.
+   */
+  archived_at?: string;
 }
 
-export type AppUserInput = Omit<AppUser, 'id' | 'created_at' | 'active'>;
+export type AppUserInput = Omit<AppUser, 'id' | 'created_at' | 'active' | 'archived_at'>;
 
-// ─── Client notifications ────────────────────────────────────────────────────
+// ─── Staff notifications ─────────────────────────────────────────────────────
+export type NotificationCategory = 'package' | 'payment' | 'email';
+
+export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  package: 'Colis',
+  payment: 'Paiements',
+  email: 'E-mails clients',
+};
+
 export type NotificationDelivery = 'queued' | 'sent' | 'failed' | 'skipped';
 
 export const NOTIFICATION_DELIVERY_LABELS: Record<NotificationDelivery, string> = {
@@ -282,14 +293,18 @@ export const NOTIFICATION_DELIVERY_LABELS: Record<NotificationDelivery, string> 
   skipped: 'Non envoyé',
 };
 
-export interface NotificationLog {
+/** Événement affiché au personnel dans la cloche et sur la page des notifications. */
+export interface AppNotification {
   id: string;
-  package_id: string;
-  tracking_number: string;
-  client_name?: string;
-  recipient_email?: string;
-  package_status: PackageStatus;
-  delivery: NotificationDelivery;
-  reason?: string;
+  category: NotificationCategory;
+  title: string;
+  message: string;
+  package_id?: string;
+  tracking_number?: string;
+  /** Renseigné seulement pour les e-mails envoyés aux clients. */
+  delivery?: NotificationDelivery;
+  read: boolean;
   created_at: string;
 }
+
+export type NewNotification = Omit<AppNotification, 'id' | 'read' | 'created_at'>;

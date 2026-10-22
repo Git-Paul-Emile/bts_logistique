@@ -1,5 +1,6 @@
-import { Package, PackageStatus, PackageUpdateInput, PaymentMethod } from '@/types';
+import type { Package, PackageStatus, PackageUpdateInput, PaymentMethod } from '@/types';
 import { computeCubicMeter, computePaymentStatus, computePrice } from '@/utils/packagePricing';
+import { reportError } from '@/lib/reportError';
 
 const PACKAGES_STORAGE_KEY = 'bts_packages_v1';
 
@@ -11,7 +12,7 @@ export const initialPackages: Package[] = [
     client_name: 'Électro Abidjan SARL (M. Koffi)',
     description: 'Cartons composants électroniques & accessoires smartphones',
     origin: 'Guangzhou (Chine)',
-    destination: 'Abidjan (Côte d\'Ivoire)',
+    destination: "Abidjan (Côte d'Ivoire)",
     length_cm: 120,
     width_cm: 80,
     height_cm: 100,
@@ -39,7 +40,7 @@ export const initialPackages: Package[] = [
         package_id: 'pkg-1',
         status: 'in_transit',
         location: 'Port de Nansha / Conteneur MSC-78901',
-        comment: 'Chargé à bord du navire en partance pour le Port Autonome d\'Abidjan.',
+        comment: "Chargé à bord du navire en partance pour le Port Autonome d'Abidjan.",
         agent_name: 'Logistique Export BTS',
         created_at: '2026-10-14T14:15:00Z',
       },
@@ -134,7 +135,7 @@ export const initialPackages: Package[] = [
     client_name: 'Électro Abidjan SARL (M. Koffi)',
     description: 'Écrans LED industriels & transformateurs',
     origin: 'Guangzhou (Chine)',
-    destination: 'Abidjan (Côte d\'Ivoire)',
+    destination: "Abidjan (Côte d'Ivoire)",
     length_cm: 200,
     width_cm: 60,
     height_cm: 80,
@@ -178,7 +179,8 @@ function loadStoredPackages(): Package[] {
       return initialPackages;
     }
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    reportError('packages.api : loadStoredPackages', error);
     return initialPackages;
   }
 }
@@ -186,8 +188,8 @@ function loadStoredPackages(): Package[] {
 function savePackagesToStorage(packages: Package[]) {
   try {
     localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(packages));
-  } catch {
-    // ignore
+  } catch (error) {
+    reportError('packages.api : savePackagesToStorage', error);
   }
 }
 
@@ -204,9 +206,7 @@ export const packagesApi = {
   async getPackageByTracking(tracking: string): Promise<Package | null> {
     const normalized = tracking.trim().toUpperCase();
     const list = loadStoredPackages();
-    return (
-      list.find((p) => p.tracking_number.toUpperCase() === normalized) || null
-    );
+    return list.find((p) => p.tracking_number.toUpperCase() === normalized) || null;
   },
 
   async createPackage(
@@ -214,9 +214,9 @@ export const packagesApi = {
   ): Promise<Package> {
     const list = loadStoredPackages();
     const now = new Date().toISOString();
-    const id = `pkg-${Date.now()}`;
+    const id = `pkg-${crypto.randomUUID()}`;
     const initialEvent = {
-      id: `evt-${Date.now()}`,
+      id: `evt-${crypto.randomUUID()}`,
       package_id: id,
       status: data.status || 'registered',
       location: data.origin,
@@ -247,12 +247,11 @@ export const packagesApi = {
   ): Promise<Package | null> {
     const list = loadStoredPackages();
     const index = list.findIndex((p) => p.id === id);
-    if (index === -1) return null;
-
     const current = list[index];
+    if (!current) return null;
     const now = new Date().toISOString();
     const newEvent = {
-      id: `evt-${Date.now()}`,
+      id: `evt-${crypto.randomUUID()}`,
       package_id: id,
       status: newStatus,
       location: location || current.destination,
@@ -276,9 +275,8 @@ export const packagesApi = {
   async updatePackage(id: string, changes: PackageUpdateInput): Promise<Package | null> {
     const list = loadStoredPackages();
     const index = list.findIndex((p) => p.id === id);
-    if (index === -1) return null;
-
     const current = list[index];
+    if (!current) return null;
     const cubicMeter = computeCubicMeter(changes.length_cm, changes.width_cm, changes.height_cm);
     const finalPrice = computePrice(cubicMeter, changes.coefficient);
     const updated: Package = {
@@ -303,9 +301,8 @@ export const packagesApi = {
   ): Promise<Package | null> {
     const list = loadStoredPackages();
     const index = list.findIndex((p) => p.id === id);
-    if (index === -1) return null;
-
     const current = list[index];
+    if (!current) return null;
     const newAmountPaid = (current.amount_paid || 0) + amount;
     const paymentStatus = computePaymentStatus(newAmountPaid, current.final_price);
 

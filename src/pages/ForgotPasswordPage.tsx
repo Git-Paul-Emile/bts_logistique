@@ -1,5 +1,6 @@
-import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router';
 import { MailCheck } from 'lucide-react';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
@@ -15,7 +16,9 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
 
   const validateEmail = (value: string): string =>
-    isValidEmail(value) ? '' : 'Saisissez une adresse e-mail complète, par exemple prenom.nom@bts-logistique.fr.';
+    isValidEmail(value)
+      ? ''
+      : 'Saisissez une adresse e-mail complète, par exemple prenom.nom@bts-logistique.fr.';
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -37,12 +40,15 @@ export function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <AuthLayout title="Vérifiez votre boîte e-mail" description="La demande a bien été prise en compte.">
+      <AuthLayout
+        title="Vérifiez votre boîte e-mail"
+        description="La demande a bien été prise en compte."
+      >
         <div className="flex gap-3 rounded-md border border-bts-green-200 bg-bts-green-50 p-4 text-sm text-bts-green-900">
           <MailCheck size={20} aria-hidden="true" className="shrink-0" />
           <p>
-            Si un compte existe pour <strong>{email.trim()}</strong>, vous recevrez un lien pour choisir un
-            nouveau mot de passe. Le lien est valable pour une durée limitée.
+            Si un compte existe pour <strong>{email.trim()}</strong>, vous recevrez un lien pour
+            choisir un nouveau mot de passe. Le lien est valable pour une durée limitée.
           </p>
         </div>
         <p className="mt-5 text-center text-sm">

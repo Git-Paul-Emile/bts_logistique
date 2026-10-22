@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import type { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router';
+import { useAuth } from '@/context/useAuth';
 import { Loader } from '@/components/common/Loader';
 import { PATHS } from '@/router/paths';
 
@@ -9,7 +9,8 @@ interface ProtectedRouteProps {
 }
 
 export interface LoginRedirectState {
-  from: string;
+  /** Page demandée avant la connexion, pour y revenir ensuite. */
+  from?: string;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {

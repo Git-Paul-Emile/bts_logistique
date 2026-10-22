@@ -1,4 +1,5 @@
-import { PackageStatus, TRANSPORT_MODE_LABELS } from '@/types';
+import type { PackageStatus } from '@/types';
+import { TRANSPORT_MODE_LABELS } from '@/types';
 
 // Les ancres pointent vers la page d'accueil pour fonctionner aussi depuis les autres pages.
 export const PORTAL_NAV_LINKS = [

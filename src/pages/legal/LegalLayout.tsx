@@ -1,16 +1,17 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { PublicLayout } from '@/features/portal/components/PublicLayout';
 import { formatDate } from '@/utils/formatters';
 
 interface LegalLayoutProps {
   title: string;
   updatedAt: string;
+  description: string;
   children: ReactNode;
 }
 
-export function LegalLayout({ title, updatedAt, children }: LegalLayoutProps) {
+export function LegalLayout({ title, updatedAt, description, children }: LegalLayoutProps) {
   return (
-    <PublicLayout title={title}>
+    <PublicLayout title={title} description={description}>
       <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:py-16">
         <h1 className="font-display text-3xl font-bold text-bts-blue sm:text-4xl">{title}</h1>
         <p className="mt-2 text-sm text-slate-500">

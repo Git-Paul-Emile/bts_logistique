@@ -1,5 +1,7 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { reportError } from '@/lib/reportError';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    reportError('Erreur d’affichage interceptée par ErrorBoundary', error, errorInfo);
   }
 
   private handleReset = () => {
@@ -38,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex min-h-[300px] w-full flex-col items-center justify-center p-8 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center text-red-600">
             <AlertTriangle size={24} />
           </div>
           <h2 className="font-['Space_Grotesk'] text-lg font-bold text-[#003366]">

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { PricingGrid } from '@/types';
+import type { PricingGrid } from '@/types';
 import { DEFAULT_PRICING_GRID, pricingApi } from '@/api/endpoints/pricing.api';
 
 export function usePricingGrid() {

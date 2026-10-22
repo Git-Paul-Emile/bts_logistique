@@ -12,8 +12,8 @@ export function PortalFooter() {
         <div className="lg:col-span-4">
           <Logo variant="horizontal" theme="dark" size="md" />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
-            Transport de colis par voie maritime et aérienne de la Chine, de Dubaï et de la Turquie vers
-            l’Afrique de l’Ouest.
+            Transport de colis par voie maritime et aérienne de la Chine, de Dubaï et de la Turquie
+            vers l’Afrique de l’Ouest.
           </p>
         </div>
 
@@ -48,12 +48,19 @@ export function PortalFooter() {
             </li>
             <li>
               <a href={CONTACT.phoneHref} className="flex gap-3 hover:text-bts-green-400">
-                <Phone size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-bts-green-400" />
+                <Phone
+                  size={16}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-bts-green-400"
+                />
                 {CONTACT.phoneDisplay}
               </a>
             </li>
             <li>
-              <a href={`mailto:${CONTACT.email}`} className="flex gap-3 break-all hover:text-bts-green-400">
+              <a
+                href={`mailto:${CONTACT.email}`}
+                className="flex gap-3 break-all hover:text-bts-green-400"
+              >
                 <Mail size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-bts-green-400" />
                 {CONTACT.email}
               </a>

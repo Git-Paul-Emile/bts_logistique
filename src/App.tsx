@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { BrowserRouter, Route, Routes } from 'react-router';
+import { AuthProvider } from '@/context/AuthProvider';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Loader } from '@/components/common/Loader';
 import { ProtectedRoute } from '@/router/ProtectedRoute';
 import { PATHS } from '@/router/paths';
+import { NotificationsProvider } from '@/features/notifications/context/NotificationsProvider';
 
 // Une route = un fichier chargé à la demande : le visiteur du site public
 // ne télécharge pas le code de l'espace de gestion.
@@ -14,16 +15,24 @@ const PublicPortalPage = lazy(() =>
 const TrackingPage = lazy(() =>
   import('@/pages/TrackingPage').then((module) => ({ default: module.TrackingPage }))
 );
-const PrivacyPage = lazy(() => import('@/pages/legal/PrivacyPage').then((module) => ({ default: module.PrivacyPage })));
-const TermsPage = lazy(() => import('@/pages/legal/TermsPage').then((module) => ({ default: module.TermsPage })));
-const LoginPage = lazy(() => import('@/pages/LoginPage').then((module) => ({ default: module.LoginPage })));
+const PrivacyPage = lazy(() =>
+  import('@/pages/legal/PrivacyPage').then((module) => ({ default: module.PrivacyPage }))
+);
+const TermsPage = lazy(() =>
+  import('@/pages/legal/TermsPage').then((module) => ({ default: module.TermsPage }))
+);
+const LoginPage = lazy(() =>
+  import('@/pages/LoginPage').then((module) => ({ default: module.LoginPage }))
+);
 const ForgotPasswordPage = lazy(() =>
   import('@/pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage }))
 );
 const ResetPasswordPage = lazy(() =>
   import('@/pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage }))
 );
-const AppRouter = lazy(() => import('@/router/AppRouter').then((module) => ({ default: module.AppRouter })));
+const AppRouter = lazy(() =>
+  import('@/router/AppRouter').then((module) => ({ default: module.AppRouter }))
+);
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage }))
 );
@@ -47,7 +56,9 @@ export default function App() {
                 path={`${PATHS.admin}/*`}
                 element={
                   <ProtectedRoute>
-                    <AppRouter />
+                    <NotificationsProvider>
+                      <AppRouter />
+                    </NotificationsProvider>
                   </ProtectedRoute>
                 }
               />

@@ -10,26 +10,24 @@ const VISIBILITY_THRESHOLD = 0.5;
  */
 export function useCountUp<T extends HTMLElement>(target: number, durationMs: number) {
   const { ref, inView } = useInViewOnce<T>(VISIBILITY_THRESHOLD);
-  const [value, setValue] = useState(0);
+  const [animatedValue, setAnimatedValue] = useState(0);
+  const reducedMotion = prefersReducedMotion();
 
   useEffect(() => {
-    if (!inView) return;
-    if (prefersReducedMotion()) {
-      setValue(target);
-      return;
-    }
+    if (!inView || reducedMotion) return;
 
     let frame = 0;
     const startTime = performance.now();
     const animate = (now: number) => {
       const progress = Math.min((now - startTime) / durationMs, 1);
-      setValue(Math.round(progress * target));
+      setAnimatedValue(Math.round(progress * target));
       if (progress < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
-  }, [inView, target, durationMs]);
+  }, [inView, reducedMotion, target, durationMs]);
 
+  const value = inView && reducedMotion ? target : animatedValue;
   return { ref, value };
 }

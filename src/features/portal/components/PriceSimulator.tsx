@@ -1,7 +1,9 @@
 import { formatVolume } from '@/utils/formatters';
-import { TRANSPORT_MODE_LABELS, TransportMode } from '@/types';
+import type { TransportMode } from '@/types';
+import { TRANSPORT_MODE_LABELS } from '@/types';
 import { usePricingGrid } from '@/features/settings/hooks/usePricingGrid';
-import { Dimensions, usePriceEstimate } from '../hooks/usePriceEstimate';
+import type { Dimensions } from '../hooks/usePriceEstimate';
+import { usePriceEstimate } from '../hooks/usePriceEstimate';
 import { SectionHeading } from './SectionHeading';
 
 const DIMENSION_FIELDS: { key: keyof Dimensions; label: string }[] = [
@@ -20,7 +22,9 @@ function formatFcfa(amount: number): string {
 
 export function PriceSimulator() {
   const { grid } = usePricingGrid();
-  const { dimensions, updateDimension, mode, setMode, cubicMeter, priceXof } = usePriceEstimate(grid.rates);
+  const { dimensions, updateDimension, mode, setMode, cubicMeter, priceXof } = usePriceEstimate(
+    grid.rates
+  );
 
   return (
     <section id="simulateur" className="scroll-mt-20 bg-bts-canvas py-16 lg:py-24">
@@ -35,7 +39,9 @@ export function PriceSimulator() {
             {TRANSPORT_MODES.map((key) => (
               <li key={key} className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-sm text-slate-600">{TRANSPORT_MODE_LABELS[key]}</p>
-                <p className="font-display text-base font-bold text-bts-blue">{formatFcfa(grid.rates[key].client_rate_per_cbm)} / m³</p>
+                <p className="font-display text-base font-bold text-bts-blue">
+                  {formatFcfa(grid.rates[key].client_rate_per_cbm)} / m³
+                </p>
               </li>
             ))}
           </ul>
@@ -43,7 +49,8 @@ export function PriceSimulator() {
 
         <form
           onSubmit={(event) => event.preventDefault()}
-          className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 lg:col-span-7"
+          noValidate
+          className="overflow-hidden rounded-lg bg-white shadow-xs ring-1 ring-slate-200 lg:col-span-7"
           aria-label="Simulateur de prix"
         >
           <div className="space-y-6 p-6 sm:p-8">
@@ -55,7 +62,7 @@ export function PriceSimulator() {
                   return (
                     <label
                       key={key}
-                      className={`flex h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 text-sm font-semibold transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-bts-blue ${
+                      className={`flex h-12 cursor-pointer items-center justify-center gap-2 rounded-md border-2 text-sm font-semibold transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-bts-blue has-focus-visible:outline-solid ${
                         isActive
                           ? 'border-bts-green text-bts-green-800'
                           : 'border-slate-200 text-slate-700 hover:border-slate-400'
@@ -81,7 +88,10 @@ export function PriceSimulator() {
               <div className="mt-3 grid gap-4 sm:grid-cols-3">
                 {DIMENSION_FIELDS.map((field) => (
                   <div key={field.key}>
-                    <label htmlFor={`dimension-${field.key}`} className="block text-sm text-slate-600">
+                    <label
+                      htmlFor={`dimension-${field.key}`}
+                      className="block text-sm text-slate-600"
+                    >
                       {field.label} (cm)
                     </label>
                     <input
@@ -91,7 +101,7 @@ export function PriceSimulator() {
                       min={1}
                       value={dimensions[field.key]}
                       onChange={(event) => updateDimension(field.key, Number(event.target.value))}
-                      className="mt-1 h-12 w-full rounded-md border border-slate-300 px-3 text-base text-bts-dark focus:border-bts-blue focus:outline-none focus:ring-2 focus:ring-bts-blue/20"
+                      className="mt-1 h-12 w-full rounded-md border border-slate-300 px-3 text-base text-bts-dark focus:border-bts-blue focus:ring-2 focus:ring-bts-blue/20 focus:outline-hidden"
                     />
                   </div>
                 ))}
@@ -106,8 +116,12 @@ export function PriceSimulator() {
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm text-white/70">Prix estimé, {TRANSPORT_MODE_LABELS[mode].toLowerCase()}</p>
-                <p className="mt-1 font-display text-4xl font-extrabold text-bts-green-400">{formatFcfa(priceXof)}</p>
+                <p className="text-sm text-white/70">
+                  Prix estimé, {TRANSPORT_MODE_LABELS[mode].toLowerCase()}
+                </p>
+                <p className="mt-1 font-display text-4xl font-extrabold text-bts-green-400">
+                  {formatFcfa(priceXof)}
+                </p>
               </div>
               <p className="text-sm text-white/80 sm:text-right">
                 Volume : {formatVolume(cubicMeter)}

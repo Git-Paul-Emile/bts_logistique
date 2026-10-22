@@ -18,25 +18,25 @@ export function HeroSection() {
           alt=""
           width={2000}
           height={1333}
-          className="absolute inset-x-0 -top-[30%] -z-10 h-[140%] w-full object-cover will-change-transform"
+          className="absolute inset-x-0 top-[-30%] -z-10 h-[140%] w-full object-cover will-change-transform"
         />
         {/* Voile uni : garantit le contraste du texte blanc sans dégradé (charte UI). */}
         <div className="absolute inset-0 -z-10 bg-bts-blue-950/60" aria-hidden="true" />
 
-        <div className="mx-auto w-full max-w-7xl px-4 pb-32 pt-12 sm:px-6 sm:pb-36">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-12 pb-32 sm:px-6 sm:pb-36">
           <div className="max-w-2xl">
-            <h1 className="font-display text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">
+            <h1 className="font-display text-4xl leading-[1.1] font-extrabold text-white sm:text-5xl sm:leading-none lg:text-6xl">
               Vos colis de Chine, Dubaï et Turquie{' '}
               <span className="text-bts-green-400">livrés en Afrique de l’Ouest</span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
-              Groupage maritime, fret aérien et dédouanement pour les commerçants et les particuliers,
-              jusqu’à Abidjan, Dakar et Bamako.
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg sm:leading-7">
+              Groupage maritime, fret aérien et dédouanement pour les commerçants et les
+              particuliers, jusqu’à Abidjan, Dakar et Bamako.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href="#simulateur"
-                className="inline-flex h-12 items-center gap-2 rounded-md bg-bts-green px-5 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="inline-flex h-12 items-center gap-2 rounded-md bg-bts-green px-5 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:outline-solid"
               >
                 Estimer le prix d’un envoi <ArrowRight size={16} aria-hidden="true" />
               </a>
@@ -52,7 +52,7 @@ export function HeroSection() {
       </div>
 
       <div className="relative z-10 mx-auto -mt-20 max-w-7xl px-4 sm:px-6">
-        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 shadow-xs sm:grid-cols-2 lg:grid-cols-4">
           {HIGHLIGHTS.map((item) => (
             <li key={item.title} className="bg-white p-5 lg:p-6">
               <p className="font-display text-sm font-bold text-bts-blue">{item.title}</p>

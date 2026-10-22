@@ -1,108 +1,184 @@
-import { useMemo, useState } from 'react';
-import { BellOff } from 'lucide-react';
+import { BellOff, Mail, MailOpen, Search } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/common/Loader';
+import { NotificationItemContent } from '@/features/notifications/components/NotificationItemContent';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';
-import { formatDateTime } from '@/utils/formatDate';
-import {
-  NOTIFICATION_DELIVERY_LABELS,
-  NotificationDelivery,
-  PACKAGE_STATUS_LABELS,
-} from '@/types';
+import type {
+  CategoryFilter,
+  ReadFilter,
+} from '@/features/notifications/hooks/useNotificationFilters';
+import { useNotificationFilters } from '@/features/notifications/hooks/useNotificationFilters';
+import type { AppNotification, NotificationCategory } from '@/types';
+import { NOTIFICATION_CATEGORY_LABELS, NOTIFICATION_DELIVERY_LABELS } from '@/types';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import type { SelectOption } from '@/components/ui/SearchableSelect';
 
-type DeliveryFilter = 'all' | NotificationDelivery;
+interface NotificationsPageProps {
+  onOpenPackage: (packageId: string) => void;
+}
 
-const DELIVERY_STYLES: Record<NotificationDelivery, string> = {
-  queued: 'text-amber-700',
-  sent: 'text-emerald-700',
-  failed: 'text-red-700',
-  skipped: 'text-slate-500',
-};
+const READ_TABS: { value: ReadFilter; label: string }[] = [
+  { value: 'all', label: 'Toutes' },
+  { value: 'unread', label: 'Non lues' },
+  { value: 'read', label: 'Lues' },
+];
 
-const FILTERS = ['all', ...Object.keys(NOTIFICATION_DELIVERY_LABELS)] as DeliveryFilter[];
+const CATEGORY_OPTIONS: SelectOption<CategoryFilter>[] = [
+  { value: 'all', label: 'Toutes les catégories' },
+  ...(Object.keys(NOTIFICATION_CATEGORY_LABELS) as NotificationCategory[]).map((category) => ({
+    value: category,
+    label: NOTIFICATION_CATEGORY_LABELS[category],
+  })),
+];
 
-export function NotificationsPage() {
-  const { notifications, loading } = useNotifications();
-  const [filter, setFilter] = useState<DeliveryFilter>('all');
+export function NotificationsPage({ onOpenPackage }: NotificationsPageProps) {
+  const { notifications, loading, unreadCount, setRead, markAllAsRead } = useNotifications();
+  const filters = useNotificationFilters(notifications);
 
-  const visible = useMemo(
-    () => (filter === 'all' ? notifications : notifications.filter((entry) => entry.delivery === filter)),
-    [filter, notifications]
-  );
+  const openNotification = (notification: AppNotification) => {
+    if (!notification.read) void setRead([notification.id], true);
+    if (notification.package_id) onOpenPackage(notification.package_id);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-[#003366]">Journal des notifications</h2>
+          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-[#003366]">
+            Notifications
+          </h2>
           <p className="mt-0.5 text-sm text-slate-600">
-            E-mails envoyés aux clients à chaque changement de statut d’un colis.
+            Colis enregistrés, changements de statut, paiements et e-mails envoyés aux clients.
           </p>
         </div>
-        <div>
-          <label htmlFor="delivery-filter" className="mb-1 block text-xs font-semibold text-slate-700">
-            Afficher
-          </label>
-          <select
-            id="delivery-filter"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as DeliveryFilter)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+        <Button variant="outline" onClick={() => void markAllAsRead()} disabled={unreadCount === 0}>
+          Tout marquer comme lu
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 lg:flex-row lg:items-end">
+        <div className="flex-1">
+          <label
+            htmlFor="notification-search"
+            className="mb-1 block text-xs font-semibold text-slate-700"
           >
-            {FILTERS.map((value) => (
-              <option key={value} value={value}>
-                {value === 'all' ? 'Toutes les notifications' : NOTIFICATION_DELIVERY_LABELS[value]}
-              </option>
-            ))}
-          </select>
+            Rechercher
+          </label>
+          <div className="relative">
+            <Search
+              size={16}
+              aria-hidden="true"
+              className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              id="notification-search"
+              type="search"
+              value={filters.search}
+              onChange={(event) => filters.setSearch(event.target.value)}
+              placeholder="N° de suivi, client, e-mail..."
+              className="w-full rounded-md border border-slate-300 py-2 pr-3 pl-9 text-sm focus:border-[#003366] focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
+            />
+          </div>
+        </div>
+        <div>
+          <label
+            htmlFor="notification-category"
+            className="mb-1 block text-xs font-semibold text-slate-700"
+          >
+            Catégorie
+          </label>
+          <div className="w-full lg:w-48">
+            <SearchableSelect<CategoryFilter>
+              id="notification-category"
+              size="sm"
+              value={filters.category}
+              onChange={filters.setCategory}
+              options={CATEGORY_OPTIONS}
+            />
+          </div>
+        </div>
+        <div
+          role="group"
+          aria-label="Filtrer par état de lecture"
+          className="flex rounded-md border border-slate-300 p-0.5"
+        >
+          {READ_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              aria-pressed={filters.readFilter === tab.value}
+              onClick={() => filters.setReadFilter(tab.value)}
+              className={`rounded px-3 py-1.5 text-xs font-semibold transition ${
+                filters.readFilter === tab.value
+                  ? 'bg-[#003366] text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label} ({filters.counts[tab.value]})
+            </button>
+          ))}
         </div>
       </div>
 
-      {loading && <Loader label="Chargement du journal..." />}
+      {loading && <Loader label="Chargement des notifications..." />}
 
-      {!loading && visible.length === 0 && (
+      {!loading && filters.visible.length === 0 && (
         <div className="flex flex-col items-center rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
           <BellOff size={28} aria-hidden="true" className="text-slate-400" />
-          <p className="mt-3 font-semibold text-slate-700">Aucune notification pour le moment</p>
-          <p className="mt-1 max-w-md text-sm text-slate-500">
-            Une notification est créée quand vous changez le statut d’un colis en laissant cochée l’option
-            « Notifier le client par e-mail ».
+          <p className="mt-3 font-semibold text-slate-700">
+            {filters.hasActiveFilters
+              ? 'Aucune notification ne correspond à ces filtres'
+              : 'Aucune notification pour le moment'}
           </p>
+          {filters.hasActiveFilters && (
+            <Button variant="ghost" size="sm" className="mt-3" onClick={filters.resetFilters}>
+              Effacer les filtres
+            </Button>
+          )}
         </div>
       )}
 
-      {!loading && visible.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-semibold">Date</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Colis</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Destinataire</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Statut annoncé</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Envoi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {visible.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(entry.created_at)}</td>
-                  <td className="px-4 py-3 font-mono font-semibold text-[#003366]">{entry.tracking_number}</td>
-                  <td className="px-4 py-3">
-                    <p className="text-slate-800">{entry.client_name ?? 'Client inconnu'}</p>
-                    <p className="text-xs text-slate-500">{entry.recipient_email ?? 'Pas d’adresse e-mail'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{PACKAGE_STATUS_LABELS[entry.package_status]}</td>
-                  <td className="px-4 py-3">
-                    <p className={`font-semibold ${DELIVERY_STYLES[entry.delivery]}`}>
-                      {NOTIFICATION_DELIVERY_LABELS[entry.delivery]}
-                    </p>
-                    {entry.reason && <p className="text-xs text-slate-500">{entry.reason}</p>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {!loading && filters.visible.length > 0 && (
+        <ul
+          className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white"
+          aria-live="polite"
+        >
+          {filters.visible.map((notification) => (
+            <li
+              key={notification.id}
+              className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-start ${notification.read ? '' : 'bg-[#003366]/3'}`}
+            >
+              <button
+                type="button"
+                onClick={() => openNotification(notification)}
+                disabled={!notification.package_id}
+                className="flex min-w-0 flex-1 text-left disabled:cursor-default"
+                aria-label={
+                  notification.package_id
+                    ? `${notification.title}, ouvrir le colis ${notification.tracking_number}`
+                    : undefined
+                }
+              >
+                <NotificationItemContent notification={notification} />
+              </button>
+              <div className="flex shrink-0 items-center gap-3">
+                {notification.delivery && (
+                  <span className="text-xs font-semibold text-slate-500">
+                    {NOTIFICATION_DELIVERY_LABELS[notification.delivery]}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={notification.read ? <Mail size={14} /> : <MailOpen size={14} />}
+                  onClick={() => void setRead([notification.id], !notification.read)}
+                >
+                  {notification.read ? 'Marquer non lue' : 'Marquer lue'}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

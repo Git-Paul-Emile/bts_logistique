@@ -1,5 +1,6 @@
-import { forwardRef, InputHTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import type { InputHTMLAttributes, ReactNode } from 'react';
+import { forwardRef } from 'react';
+import { cn } from '@/lib/classNames';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -11,17 +12,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
-    {
-      className,
-      type = 'text',
-      label,
-      error,
-      helperText,
-      leftIcon,
-      rightElement,
-      id,
-      ...props
-    },
+    { className, type = 'text', label, error, helperText, leftIcon, rightElement, id, ...props },
     ref
   ) => {
     const inputId = id || (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
@@ -29,10 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="mb-1.5 block text-xs font-semibold text-slate-700"
-          >
+          <label htmlFor={inputId} className="mb-1.5 block text-xs font-semibold text-slate-700">
             {label}
           </label>
         )}
@@ -47,7 +35,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={type}
             ref={ref}
             className={cn(
-              'w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-1',
+              'w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:ring-1 focus:outline-hidden',
               Boolean(leftIcon) && 'pl-9',
               Boolean(rightElement) && 'pr-12',
               error
@@ -60,9 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightElement && (
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              {rightElement}
-            </div>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">{rightElement}</div>
           )}
         </div>
         {error ? (

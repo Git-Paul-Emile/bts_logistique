@@ -1,6 +1,6 @@
 import { PricingSettingsForm } from '@/features/settings/components/PricingSettingsForm';
 import { Loader } from '@/components/common/Loader';
-import { PricingGrid } from '@/types';
+import type { PricingGrid } from '@/types';
 
 interface SettingsPageProps {
   grid: PricingGrid;

@@ -1,25 +1,11 @@
-import { useEffect, useState } from 'react';
-import { NotificationLog } from '@/types';
-import { notificationsApi } from '@/api/endpoints/notifications.api';
+import { useContext } from 'react';
+import type { NotificationsContextValue } from '../context/NotificationsContext';
+import { NotificationsContext } from '../context/NotificationsContext';
 
-export function useNotifications() {
-  const [notifications, setNotifications] = useState<NotificationLog[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    notificationsApi
-      .getNotifications()
-      .then((loaded) => {
-        if (!cancelled) setNotifications(loaded);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { notifications, loading };
+export function useNotifications(): NotificationsContextValue {
+  const context = useContext(NotificationsContext);
+  if (!context) {
+    throw new Error('useNotifications doit être utilisé dans un NotificationsProvider');
+  }
+  return context;
 }

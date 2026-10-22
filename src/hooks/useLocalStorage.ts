@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
+import { reportError } from '@/lib/reportError';
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, (value: T | ((val: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
       return item ? (JSON.parse(item) as T) : initialValue;
     } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
+      reportError(`Lecture impossible dans le stockage local : ${key}`, error);
       return initialValue;
     }
   });
@@ -15,7 +19,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     try {
       window.localStorage.setItem(key, JSON.stringify(storedValue));
     } catch (error) {
-      console.warn(`Error writing to localStorage key "${key}":`, error);
+      reportError(`Écriture impossible dans le stockage local : ${key}`, error);
     }
   }, [key, storedValue]);
 

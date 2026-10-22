@@ -1,5 +1,6 @@
-import { FormEvent, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -28,7 +29,10 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Lien invalide" description="Ce lien de réinitialisation est incomplet ou a expiré.">
+      <AuthLayout
+        title="Lien invalide"
+        description="Ce lien de réinitialisation est incomplet ou a expiré."
+      >
         <Link
           to={PATHS.forgotPassword}
           className="flex h-10 w-full items-center justify-center rounded-lg bg-bts-blue text-sm font-semibold text-white hover:bg-bts-blue-900"
@@ -41,7 +45,10 @@ export function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthLayout title="Mot de passe modifié" description="Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.">
+      <AuthLayout
+        title="Mot de passe modifié"
+        description="Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+      >
         <Button className="w-full" onClick={() => navigate(PATHS.login)}>
           Se connecter
         </Button>
@@ -53,7 +60,8 @@ export function ResetPasswordPage() {
     event.preventDefault();
     const nextErrors: FieldErrors = {
       password: getPasswordError(password) || undefined,
-      confirmation: password === confirmation ? undefined : 'Les deux mots de passe ne sont pas identiques.',
+      confirmation:
+        password === confirmation ? undefined : 'Les deux mots de passe ne sont pas identiques.',
     };
     if (nextErrors.password || nextErrors.confirmation) {
       setErrors(nextErrors);
@@ -71,10 +79,16 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <AuthLayout title="Choisir un nouveau mot de passe" description="Ce mot de passe remplacera l’ancien.">
+    <AuthLayout
+      title="Choisir un nouveau mot de passe"
+      description="Ce mot de passe remplacera l’ancien."
+    >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {errors.form && (
-          <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
             {errors.form}
           </p>
         )}
@@ -88,7 +102,13 @@ export function ResetPasswordPage() {
             setErrors((previous) => ({ ...previous, password: undefined }));
             setPassword(event.target.value);
           }}
-          onBlur={() => password && setErrors((previous) => ({ ...previous, password: getPasswordError(password) || undefined }))}
+          onBlur={() =>
+            password &&
+            setErrors((previous) => ({
+              ...previous,
+              password: getPasswordError(password) || undefined,
+            }))
+          }
         />
         <PasswordInput
           label="Confirmer le mot de passe"

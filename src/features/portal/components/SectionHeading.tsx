@@ -22,7 +22,7 @@ export function SectionHeading({
   return (
     <div className={align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-xl'}>
       <Heading
-        className={`font-display text-3xl font-bold leading-tight sm:text-4xl ${
+        className={`font-display text-3xl leading-tight font-bold sm:text-4xl sm:leading-10 ${
           isDark ? 'text-white' : 'text-bts-blue'
         }`}
       >
@@ -35,7 +35,11 @@ export function SectionHeading({
         )}
       </Heading>
       {intro && (
-        <p className={`mt-4 text-base leading-relaxed ${isDark ? 'text-white/75' : 'text-slate-600'}`}>{intro}</p>
+        <p
+          className={`mt-4 text-base leading-relaxed ${isDark ? 'text-white/75' : 'text-slate-600'}`}
+        >
+          {intro}
+        </p>
       )}
     </div>
   );

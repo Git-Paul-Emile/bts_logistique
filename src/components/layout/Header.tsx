@@ -1,12 +1,15 @@
-import { Bell, Menu } from 'lucide-react';
-import { View } from '@/types';
-import { useAuth } from '@/context/AuthContext';
+import { Menu } from 'lucide-react';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import type { View } from '@/types';
+import { UserMenu } from './UserMenu';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export interface HeaderProps {
   view: View;
   onOpenMobileMenu: () => void;
   onOpenNotifications: () => void;
+  onOpenPackage: (packageId: string) => void;
+  onOpenProfile: () => void;
 }
 
 const titles: Record<View, string> = {
@@ -21,12 +24,18 @@ const titles: Record<View, string> = {
   history: 'Historique des calculs & archives',
   settings: 'Tarifs & marges collecteurs',
   users: 'Utilisateurs & collecteurs',
-  notifications: 'Journal des notifications',
+  notifications: 'Notifications',
+  profile: 'Mon profil',
 };
 
-export function Header({ view, onOpenMobileMenu, onOpenNotifications }: HeaderProps) {
-  const { user } = useAuth();
-  useDocumentTitle(`${titles[view]} (gestion)`);
+export function Header({
+  view,
+  onOpenMobileMenu,
+  onOpenNotifications,
+  onOpenPackage,
+  onOpenProfile,
+}: HeaderProps) {
+  useDocumentTitle(`${titles[view]} (gestion)`, { noIndex: true });
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
       <div className="flex items-center gap-3">
@@ -44,28 +53,11 @@ export function Header({ view, onOpenMobileMenu, onOpenNotifications }: HeaderPr
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onOpenNotifications}
-          className="p-2 text-slate-500 hover:text-slate-800 transition"
-          aria-label="Ouvrir le journal des notifications"
-        >
-          <Bell size={18} />
-        </button>
+        <NotificationBell onOpenPackage={onOpenPackage} onOpenAll={onOpenNotifications} />
 
         <div className="h-6 w-px bg-slate-200" />
 
-        {user && (
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#003366] text-xs font-bold text-white">
-              {user.initials}
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-xs font-semibold text-[#1d1d1b]">{user.name}</p>
-              <p className="text-[11px] text-slate-500">{user.role}</p>
-            </div>
-          </div>
-        )}
+        <UserMenu onOpenProfile={onOpenProfile} />
       </div>
     </header>
   );

@@ -12,7 +12,7 @@ export function Toast({ message, onClose }: ToastProps) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-lg bg-[#002244] px-4 py-3 text-sm font-medium text-white shadow-lg border border-white/10"
+      className="fixed right-5 bottom-5 z-50 flex items-center gap-3 rounded-lg border border-white/10 bg-[#002244] px-4 py-3 text-sm font-medium text-white shadow-lg"
     >
       <CheckCircle2 size={18} className="text-[#058441]" />
       <span>{message}</span>

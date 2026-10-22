@@ -1,11 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Plus, Package, Ship, Users, Globe } from 'lucide-react';
 import { PATHS } from '@/router/paths';
 import { Button } from '@/components/ui/Button';
 import { DashboardStats } from '@/features/dashboard/components/DashboardStats';
 import { RecentQuotes } from '@/features/dashboard/components/RecentQuotes';
 import { Loader } from '@/components/common/Loader';
-import { Quote, View } from '@/types';
+import type { Quote, View } from '@/types';
 
 interface DashboardPageProps {
   quotes: Quote[];
@@ -48,14 +48,14 @@ export function DashboardPage({
           <Button
             variant="secondary"
             onClick={() => onNavigate('package-new')}
-            className="text-xs gap-1.5"
+            className="gap-1.5 text-xs"
           >
             <Plus size={15} /> Nouveau colis
           </Button>
           <Button
             variant="primary"
             onClick={() => onNavigate('packages')}
-            className="text-xs bg-[#003366] text-white hover:bg-[#002244]"
+            className="bg-[#003366] text-xs text-white hover:bg-[#002244]"
           >
             Voir tous les colis
           </Button>
@@ -67,10 +67,10 @@ export function DashboardPage({
         <button
           type="button"
           onClick={() => onNavigate('packages')}
-          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:shadow-md"
         >
           <div>
-            <p className="font-bold text-sm text-[#003366]">Gestion des Colis</p>
+            <p className="text-sm font-bold text-[#003366]">Gestion des Colis</p>
             <span className="text-xs text-slate-500">Suivi & étiquetage</span>
           </div>
           <Package size={22} className="text-[#003366]" />
@@ -79,10 +79,10 @@ export function DashboardPage({
         <button
           type="button"
           onClick={() => onNavigate('shipments')}
-          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:shadow-md"
         >
           <div>
-            <p className="font-bold text-sm text-amber-700">Conteneurs & Lots</p>
+            <p className="text-sm font-bold text-amber-700">Conteneurs & Lots</p>
             <span className="text-xs text-slate-500">Taux de remplissage m³</span>
           </div>
           <Ship size={22} className="text-amber-600" />
@@ -91,10 +91,10 @@ export function DashboardPage({
         <button
           type="button"
           onClick={() => onNavigate('clients')}
-          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:shadow-md"
         >
           <div>
-            <p className="font-bold text-sm text-indigo-800">Clients & Comptes</p>
+            <p className="text-sm font-bold text-indigo-800">Clients & Comptes</p>
             <span className="text-xs text-slate-500">Solde & créances</span>
           </div>
           <Users size={22} className="text-indigo-600" />
@@ -102,10 +102,10 @@ export function DashboardPage({
 
         <Link
           to={PATHS.home}
-          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:shadow-md"
         >
           <div>
-            <p className="font-bold text-sm text-emerald-800">Site Public BTS</p>
+            <p className="text-sm font-bold text-emerald-800">Site Public BTS</p>
             <span className="text-xs text-slate-500">Simulateur & réseau</span>
           </div>
           <Globe size={22} className="text-emerald-600" />

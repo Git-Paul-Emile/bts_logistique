@@ -1,6 +1,6 @@
-import { PaymentStatus } from '@/types';
+import type { PaymentStatus } from '@/types';
 
-const CUBIC_CM_PER_CUBIC_METER = 1_000_000;
+export const CUBIC_CM_PER_CUBIC_METER = 1_000_000;
 const MIN_CUBIC_METER = 0.001;
 const VOLUME_DECIMALS = 4;
 

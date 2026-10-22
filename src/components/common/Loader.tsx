@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 interface LoaderProps {
   label?: string;
@@ -23,10 +24,14 @@ export function Loader({
       aria-live="polite"
       className="flex flex-col items-center justify-center gap-3 p-4"
     >
-      <Loader2
-        className={`animate-spin text-[#003366] ${sizeClasses[size]}`}
-        aria-hidden="true"
-      />
+      {fullScreen ? (
+        <Logo variant="icon" size="lg" className="motion-safe:animate-pulse" />
+      ) : (
+        <Loader2
+          className={`animate-spin text-[#003366] ${sizeClasses[size]}`}
+          aria-hidden="true"
+        />
+      )}
       {label && <span className="text-xs font-medium text-slate-500">{label}</span>}
       <span className="sr-only">{label}</span>
     </div>

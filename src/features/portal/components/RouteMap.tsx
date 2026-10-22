@@ -31,7 +31,10 @@ function arcPath(from: MapPoint, to: MapPoint): string {
   return `M ${from.x} ${from.y} Q ${midX} ${midY - distance * ARC_LIFT} ${to.x} ${to.y}`;
 }
 
-const LABEL_OFFSETS: Record<MapPoint['labelSide'], { dx: number; dy: number; anchor: 'start' | 'middle' | 'end' }> = {
+const LABEL_OFFSETS: Record<
+  MapPoint['labelSide'],
+  { dx: number; dy: number; anchor: 'start' | 'middle' | 'end' }
+> = {
   left: { dx: -10, dy: 4, anchor: 'end' },
   right: { dx: 10, dy: 4, anchor: 'start' },
   top: { dx: 0, dy: -12, anchor: 'middle' },
@@ -45,7 +48,9 @@ function CityLabel({ point, emphasis }: { point: MapPoint; emphasis?: boolean })
       x={point.x + offset.dx}
       y={point.y + offset.dy}
       textAnchor={offset.anchor}
-      className={emphasis ? 'fill-white text-[15px] font-bold' : 'fill-white/85 text-[13px] font-semibold'}
+      className={
+        emphasis ? 'fill-white text-[15px] font-bold' : 'fill-white/85 text-[13px] font-semibold'
+      }
     >
       {point.name}
     </text>
@@ -54,13 +59,24 @@ function CityLabel({ point, emphasis }: { point: MapPoint; emphasis?: boolean })
 
 export function RouteMap() {
   return (
-    <figure className="rounded-lg bg-white/[0.03] p-4 sm:p-6">
-      <svg viewBox="0 0 600 340" className="h-auto w-full" role="img" aria-labelledby="route-map-title">
+    <figure className="rounded-lg bg-white/3 p-4 sm:p-6">
+      <svg
+        viewBox="0 0 600 340"
+        className="h-auto w-full"
+        role="img"
+        aria-labelledby="route-map-title"
+      >
         <title id="route-map-title">
-          Liaisons depuis Istanbul, Dubaï, Guangzhou et Yiwu vers le hub d’Abidjan, puis vers Dakar et Bamako
+          Liaisons depuis Istanbul, Dubaï, Guangzhou et Yiwu vers le hub d’Abidjan, puis vers Dakar
+          et Bamako
         </title>
         <defs>
-          <pattern id="route-map-dots" width={DOT_SPACING} height={DOT_SPACING} patternUnits="userSpaceOnUse">
+          <pattern
+            id="route-map-dots"
+            width={DOT_SPACING}
+            height={DOT_SPACING}
+            patternUnits="userSpaceOnUse"
+          >
             <circle cx={2} cy={2} r={1.2} className="fill-white/15" />
           </pattern>
         </defs>
@@ -104,10 +120,12 @@ export function RouteMap() {
       </svg>
       <figcaption className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/70">
         <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-white" aria-hidden="true" /> Entrepôt de départ
+          <span className="h-2.5 w-2.5 rounded-full bg-white" aria-hidden="true" /> Entrepôt de
+          départ
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-bts-green-400" aria-hidden="true" /> Ville de livraison
+          <span className="h-2.5 w-2.5 rounded-full bg-bts-green-400" aria-hidden="true" /> Ville de
+          livraison
         </span>
       </figcaption>
     </figure>

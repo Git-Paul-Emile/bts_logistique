@@ -1,5 +1,5 @@
 import { CalculatorForm } from '@/features/quotes/components/CalculatorForm';
-import { Quote } from '@/types';
+import type { Quote } from '@/types';
 
 interface CalculatorPageProps {
   coefficient: number;
@@ -7,11 +7,7 @@ interface CalculatorPageProps {
   onDone: () => void;
 }
 
-export function CalculatorPage({
-  coefficient,
-  onSave,
-  onDone,
-}: CalculatorPageProps) {
+export function CalculatorPage({ coefficient, onSave, onDone }: CalculatorPageProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -23,11 +19,7 @@ export function CalculatorPage({
         </p>
       </div>
 
-      <CalculatorForm
-        coefficient={coefficient}
-        onSave={onSave}
-        onDone={onDone}
-      />
+      <CalculatorForm coefficient={coefficient} onSave={onSave} onDone={onDone} />
     </div>
   );
 }

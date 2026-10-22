@@ -1,84 +1,130 @@
 import { useState } from 'react';
-import { Pencil, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/common/Loader';
 import { UserFormModal } from '@/features/users/components/UserFormModal';
+import { ArchivedUsersTable } from '@/features/users/components/ArchivedUsersTable';
+import { CurrentUsersTable } from '@/features/users/components/CurrentUsersTable';
 import { useUsers } from '@/features/users/hooks/useUsers';
-import { AppUser, USER_ROLE_LABELS } from '@/types';
+import type { AppUser, AppUserInput } from '@/types';
+import { useAuth } from '@/context/useAuth';
+import { ImportExcelButton } from '@/features/import/components/ImportExcelButton';
+import type { UserImportPatch } from '@/features/import/definitions/users.import';
+import { userImportContext, usersImport } from '@/features/import/definitions/users.import';
+import { importedMessage } from '@/features/import/importMessage';
+import type { ImportBatch } from '@/features/import/importTypes';
 
 interface UsersPageProps {
   onNotify: (message: string) => void;
 }
 
+type UsersTab = 'current' | 'archived';
+
 // null = fermé ; 'new' = création ; AppUser = modification de ce compte.
 type EditorState = null | 'new' | AppUser;
 
 export function UsersPage({ onNotify }: UsersPageProps) {
-  const { users, loading, createUser, updateUser, toggleActive } = useUsers();
+  const { users, loading, createUser, updateUser, toggleActive, restoreUser } = useUsers();
+  const [tab, setTab] = useState<UsersTab>('current');
+  const currentUsers = users.filter((user) => !user.archived_at);
+  const archivedUsers = users.filter((user) => user.archived_at);
+  const { user: currentUser } = useAuth();
+
+  const handleImport = async ({
+    creates,
+    completions,
+  }: ImportBatch<AppUserInput, UserImportPatch>) => {
+    for (const item of creates) await createUser(item);
+    for (const { targetId, changes } of completions) {
+      const target = users.find((user) => user.id === targetId);
+      if (!target) continue;
+      const { name, email, phone, role, agency } = { ...target, ...changes };
+      await updateUser(targetId, { name, email, phone, role, agency });
+    }
+    onNotify(importedMessage(usersImport, creates.length, completions.length));
+  };
   const [editor, setEditor] = useState<EditorState>(null);
 
   const handleToggle = async (user: AppUser) => {
     const updated = await toggleActive(user);
-    onNotify(updated.active ? `Compte de ${updated.name} réactivé.` : `Compte de ${updated.name} désactivé.`);
+    onNotify(
+      updated.active
+        ? `Compte de ${updated.name} réactivé.`
+        : `Compte de ${updated.name} désactivé.`
+    );
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-[#003366]">Utilisateurs & collecteurs</h2>
+          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-[#003366]">
+            Utilisateurs & collecteurs
+          </h2>
           <p className="mt-0.5 text-sm text-slate-600">
-            Comptes du personnel et des collecteurs. Un compte désactivé ne peut plus se connecter.
+            Comptes du personnel et des collecteurs. Un compte désactivé ou archivé ne peut plus se
+            connecter.
           </p>
         </div>
-        <Button icon={<UserPlus size={16} />} onClick={() => setEditor('new')}>
-          Ajouter un utilisateur
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <ImportExcelButton
+            definition={usersImport}
+            getContext={() => userImportContext(users)}
+            onImport={handleImport}
+          />
+          <Button icon={<UserPlus size={16} />} onClick={() => setEditor('new')}>
+            Ajouter un utilisateur
+          </Button>
+        </div>
       </div>
 
-      {loading ? (
-        <Loader label="Chargement des comptes..." />
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-semibold">Utilisateur</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Rôle</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Agence</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Statut</th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map((user) => (
-                <tr key={user.id} className={user.active ? '' : 'bg-slate-50 text-slate-400'}>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{user.name}</p>
-                    <p className="text-xs text-slate-500">{user.email}</p>
-                  </td>
-                  <td className="px-4 py-3">{USER_ROLE_LABELS[user.role]}</td>
-                  <td className="px-4 py-3 text-slate-600">{user.agency}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-semibold ${user.active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                      {user.active ? 'Actif' : 'Désactivé'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" icon={<Pencil size={14} />} onClick={() => setEditor(user)} aria-label={`Modifier le compte de ${user.name}`}>
-                        Modifier
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleToggle(user)}>
-                        {user.active ? 'Désactiver' : 'Réactiver'}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div
+        role="tablist"
+        aria-label="Type de comptes"
+        className="flex gap-1 border-b border-slate-200"
+      >
+        {(
+          [
+            { value: 'current', label: `Comptes (${currentUsers.length})` },
+            { value: 'archived', label: `Archivés (${archivedUsers.length})` },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.value}
+            onClick={() => setTab(item.value)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold transition ${
+              tab === item.value
+                ? 'border-[#003366] text-[#003366]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <Loader label="Chargement des comptes..." />}
+
+      {!loading && tab === 'archived' && (
+        <ArchivedUsersTable
+          users={archivedUsers}
+          onRestore={async (user) => {
+            await restoreUser(user);
+            onNotify(`Compte de ${user.name} restauré. La personne peut de nouveau se connecter.`);
+          }}
+        />
+      )}
+
+      {!loading && tab === 'current' && (
+        <CurrentUsersTable
+          users={currentUsers}
+          currentUserId={currentUser?.id}
+          onEdit={setEditor}
+          onToggle={handleToggle}
+        />
       )}
 
       {editor && (

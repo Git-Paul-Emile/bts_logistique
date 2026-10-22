@@ -24,11 +24,11 @@ export function ServicesSection() {
           {SERVICES.map((service, index) => (
             <li
               key={service.title}
-              className={`group overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 ${
+              className={`group overflow-hidden rounded-lg bg-white shadow-xs ring-1 ring-slate-200 ${
                 index % 2 === 1 ? 'sm:translate-y-6' : ''
               }`}
             >
-              <div className="aspect-[4/3] overflow-hidden bg-slate-200">
+              <div className="aspect-4/3 overflow-hidden bg-slate-200">
                 <img
                   src={service.image}
                   alt={service.imageAlt}

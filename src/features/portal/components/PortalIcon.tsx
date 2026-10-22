@@ -1,5 +1,6 @@
-import { Handshake, LucideProps, Radar, ReceiptText, ShieldCheck } from 'lucide-react';
-import { WhyUsIcon } from '../portal.content';
+import type { LucideProps } from 'lucide-react';
+import { Handshake, Radar, ReceiptText, ShieldCheck } from 'lucide-react';
+import type { WhyUsIcon } from '../portal.content';
 
 const ICONS: Record<WhyUsIcon, typeof Radar> = {
   radar: Radar,

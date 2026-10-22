@@ -14,11 +14,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { Logo } from '@/components/ui/Logo';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/useAuth';
 import { PATHS } from '@/router/paths';
-import { View } from '@/types';
+import type { View } from '@/types';
+import { USER_ROLE_LABELS } from '@/types';
+import { canAccessView } from '@/features/auth/permissions';
 
 export interface SidebarProps {
   view: View;
@@ -65,6 +67,15 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const visibleSections = user
+    ? navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => canAccessView(user.role, item.id)),
+        }))
+        .filter((section) => section.items.length > 0)
+    : [];
+
   const handleSelect = (nextView: View) => {
     onNavigate(nextView);
     if (onCloseMobile) onCloseMobile();
@@ -77,7 +88,9 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
 
   return (
     <>
-      {mobileOpen && <div onClick={onCloseMobile} className="fixed inset-0 z-40 bg-black/50 lg:hidden" />}
+      {mobileOpen && (
+        <div onClick={onCloseMobile} className="fixed inset-0 z-40 bg-black/50 lg:hidden" />
+      )}
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-[260px] shrink-0 flex-col bg-[#002244] px-4 py-6 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
@@ -98,9 +111,11 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto pr-1">
-          {navSections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title}>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">{section.title}</p>
+              <p className="px-3 pb-2 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                {section.title}
+              </p>
               <nav className="space-y-1" aria-label={section.title}>
                 {section.items.map(({ id, label, icon: Icon }) => {
                   const isActive = view === id || (id === 'packages' && view === 'package-detail');
@@ -111,11 +126,14 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
                       aria-current={isActive ? 'page' : undefined}
                       className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-medium transition ${
                         isActive
-                          ? 'bg-[#e68a00] text-white font-semibold shadow-sm'
+                          ? 'bg-[#e68a00] font-semibold text-white shadow-xs'
                           : 'text-slate-300 hover:bg-white/10 hover:text-white'
                       }`}
                     >
-                      <Icon size={17} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                      <Icon
+                        size={17}
+                        className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`}
+                      />
                       <span>{label}</span>
                     </button>
                   );
@@ -125,7 +143,9 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
           ))}
 
           <div>
-            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Espace public</p>
+            <p className="px-3 pb-2 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+              Espace public
+            </p>
             <Link
               to={PATHS.home}
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
@@ -139,13 +159,22 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
         {user && (
           <div className="mt-auto border-t border-white/10 pt-4">
             <div className="flex items-center gap-3 px-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-white/20 bg-[#003366] text-xs font-bold text-white">
-                {user.initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-white">{user.name}</p>
-                <p className="text-[11px] text-slate-300">{user.role}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleSelect('profile')}
+                aria-current={view === 'profile' ? 'page' : undefined}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left hover:bg-white/10"
+                title="Mon profil"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-semibold text-white">
+                    {user.name}
+                  </span>
+                  <span className="block text-[11px] text-slate-300">
+                    {USER_ROLE_LABELS[user.role]}
+                  </span>
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={handleLogout}

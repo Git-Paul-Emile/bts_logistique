@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppUser, AppUserInput } from '@/types';
+import type { AppUser, AppUserInput } from '@/types';
 import { usersApi } from '@/api/endpoints/users.api';
 
 export function useUsers() {
@@ -42,5 +42,11 @@ export function useUsers() {
     return updated;
   }, []);
 
-  return { users, loading, createUser, updateUser, toggleActive };
+  const restoreUser = useCallback(async (user: AppUser) => {
+    const restored = await usersApi.restoreUser(user.id);
+    replaceUser(restored);
+    return restored;
+  }, []);
+
+  return { users, loading, createUser, updateUser, toggleActive, restoreUser };
 }

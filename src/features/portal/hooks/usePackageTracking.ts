@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Package, PackageStatus } from '@/types';
+import type { Package, PackageStatus } from '@/types';
 import { packagesApi } from '@/api/endpoints/packages.api';
 
 const STEP_BY_STATUS: Partial<Record<PackageStatus, number>> = {
@@ -20,26 +20,33 @@ interface TrackingLookup {
   error: boolean;
 }
 
+interface TrackingResult {
+  trackingNumber: string;
+  pkg: Package | null;
+  error: boolean;
+}
+
 /** Recherche le colis correspondant au numéro présent dans l'URL. */
-export function usePackageTracking(trackingNumber: string | undefined) {
-  const [lookup, setLookup] = useState<TrackingLookup>({ loading: false, pkg: null, error: false });
+export function usePackageTracking(trackingNumber: string | undefined): TrackingLookup {
+  const [result, setResult] = useState<TrackingResult | null>(null);
 
   useEffect(() => {
     if (!trackingNumber) return;
     let cancelled = false;
-    setLookup({ loading: true, pkg: null, error: false });
     packagesApi
       .getPackageByTracking(trackingNumber)
       .then((pkg) => {
-        if (!cancelled) setLookup({ loading: false, pkg, error: false });
+        if (!cancelled) setResult({ trackingNumber, pkg, error: false });
       })
       .catch(() => {
-        if (!cancelled) setLookup({ loading: false, pkg: null, error: true });
+        if (!cancelled) setResult({ trackingNumber, pkg: null, error: true });
       });
     return () => {
       cancelled = true;
     };
   }, [trackingNumber]);
 
-  return lookup;
+  if (!trackingNumber) return { loading: false, pkg: null, error: false };
+  if (result?.trackingNumber !== trackingNumber) return { loading: true, pkg: null, error: false };
+  return { loading: false, pkg: result.pkg, error: result.error };
 }

@@ -1,4 +1,4 @@
-import { Quote, CalculationInput, PricingSettings } from '@/types';
+import type { Quote, CalculationInput, PricingSettings } from '@/types';
 
 export interface GetQuotesResponse {
   data: Quote[];

@@ -25,5 +25,12 @@ export function Barcode({ value, height = DEFAULT_HEIGHT, className }: BarcodePr
     });
   }, [value, height]);
 
-  return <svg ref={svgRef} role="img" aria-label={`Code-barres du colis ${value}`} className={className} />;
+  return (
+    <svg
+      ref={svgRef}
+      role="img"
+      aria-label={`Code-barres du colis ${value}`}
+      className={className}
+    />
+  );
 }
