@@ -1,33 +1,17 @@
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { PasswordInput } from '@/components/ui/PasswordInput';
-import { authApi } from '@/api/endpoints/auth.api';
-import { LAST_ADMIN_ERROR } from '@/api/endpoints/users.api';
 import { useAuth } from '@/context/useAuth';
-
-const LAST_ADMIN_MESSAGE =
-  'Vous êtes le seul administrateur actif. Nommez un autre administrateur avant de supprimer votre compte.';
+import { errorMessage } from '@/lib/errorMessage';
 
 export function DeleteAccountSection() {
   const { user, deleteAccount } = useAuth();
-  const [canDelete, setCanDelete] = useState<boolean | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    authApi.canDeleteOwnAccount(user).then((allowed) => {
-      if (!cancelled) setCanDelete(allowed);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   if (!user) return null;
 
@@ -48,10 +32,12 @@ export function DeleteAccountSection() {
       // La session vidée, la protection des routes renvoie vers la connexion, qui affiche le message.
       await deleteAccount(password);
     } catch (deleteError) {
+      // Le serveur refuse aussi la suppression du dernier administrateur actif, avec son message.
       setError(
-        deleteError instanceof Error && deleteError.message === LAST_ADMIN_ERROR
-          ? LAST_ADMIN_MESSAGE
-          : 'La suppression a échoué. Vérifiez votre mot de passe et réessayez.'
+        errorMessage(
+          deleteError,
+          'La suppression a échoué. Vérifiez votre mot de passe et réessayez.'
+        )
       );
       setDeleting(false);
     }
@@ -71,16 +57,8 @@ export function DeleteAccountSection() {
       <p className="mt-1 text-sm text-slate-600">
         Votre compte sera supprimé et vous ne pourrez plus vous connecter.
       </p>
-      {canDelete === false && (
-        <p
-          role="note"
-          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800"
-        >
-          {LAST_ADMIN_MESSAGE}
-        </p>
-      )}
       <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
-        <Button variant="danger" disabled={canDelete !== true} onClick={() => setConfirmOpen(true)}>
+        <Button variant="danger" onClick={() => setConfirmOpen(true)}>
           Supprimer mon compte
         </Button>
       </div>

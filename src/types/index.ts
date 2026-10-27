@@ -7,8 +7,6 @@ export type View =
   | 'shipments'
   | 'clients'
   | 'payments'
-  | 'calculator'
-  | 'history'
   | 'settings'
   | 'users'
   | 'notifications'
@@ -60,10 +58,11 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
 // ─── Package ─────────────────────────────────────────────────────────────────
 export interface PackageEvent {
   id: string;
-  package_id: string;
   status: PackageStatus;
+  /** Lieu tel que l'agent l'a décrit, ou à défaut la ville du réseau. */
   location?: string;
   comment?: string;
+  /** Personne qui a enregistré l'étape ; « Système » pour une étape automatique. */
   agent_name: string;
   created_at: string;
 }
@@ -74,8 +73,14 @@ export interface Package {
   client_id: string;
   client_name?: string;
   description?: string;
+  /** Libellés affichés ; les codes servent aux formulaires et à l'API. */
   origin: string;
   destination: string;
+  origin_code: string;
+  destination_code: string;
+  agency_name: string;
+  collector_name?: string;
+  shipment_id?: string;
   length_cm: number;
   width_cm: number;
   height_cm: number;
@@ -95,27 +100,26 @@ export interface Package {
   events?: PackageEvent[];
 }
 
-/** Champs modifiables après l'enregistrement. Le volume et le prix sont recalculés. */
-export type PackageUpdateInput = Pick<
-  Package,
-  | 'description'
-  | 'origin'
-  | 'destination'
-  | 'length_cm'
-  | 'width_cm'
-  | 'height_cm'
-  | 'weight_kg'
-  | 'coefficient'
->;
+/** Champs modifiables après l'enregistrement. Le serveur recalcule volume, prix et marge. */
+export interface PackageUpdateInput {
+  description?: string | null;
+  origin_code?: string;
+  destination_code?: string;
+  length_cm?: number;
+  width_cm?: number;
+  height_cm?: number;
+  weight_kg?: number;
+  /** Tarif personnalisé : réservé à l'équipe. */
+  rate_per_cbm?: number;
+}
 
-export type StatusUpdateHandler = (
-  id: string,
-  status: PackageStatus,
-  location: string,
-  comment: string,
-  agentName: string,
-  notifyClient: boolean
-) => Promise<void>;
+/** Nouvelle étape de suivi. L'agent est la personne connectée, enregistrée par le serveur. */
+export interface StatusUpdateInput {
+  status: PackageStatus;
+  location: string;
+  comment?: string;
+  notifyClient: boolean;
+}
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 export interface Client {
@@ -124,60 +128,61 @@ export interface Client {
   phone: string;
   email?: string;
   address?: string;
+  agency_code: string;
+  agency_name: string;
+  /** Montants calculés par le serveur ; absents pour un collecteur, qui ne les voit pas. */
   total_billed: number;
   amount_paid: number;
+  /** Reste à payer ; négatif quand le client a versé une avance. */
+  balance: number;
+  has_debt: boolean;
   package_count: number;
   created_at: string;
 }
 
 export type ClientUpdateInput = Pick<Client, 'name' | 'phone' | 'email' | 'address'>;
 
+export interface NewClientInput extends ClientUpdateInput {
+  /** Équipe seulement ; un collecteur enregistre toujours dans son agence. */
+  agency_code?: string;
+}
+
 // ─── Payment ─────────────────────────────────────────────────────────────────
+export interface PaymentAllocation {
+  package_id: string;
+  tracking_number: string;
+  amount: number;
+}
+
 export interface Payment {
   id: string;
   client_id: string;
   client_name?: string;
+  /** Premier colis réglé, pour les écrans qui n'en montrent qu'un. */
   package_id?: string;
   tracking_number?: string;
+  /** Répartition du versement sur les colis du client. */
+  allocations: PaymentAllocation[];
+  /** Négatif sur une écriture d'annulation. */
   amount: number;
   payment_method: PaymentMethod;
   reference?: string;
   notes?: string;
+  author_name: string;
+  reverses_payment_id?: string;
+  reversed_by_payment_id?: string;
   created_at: string;
-}
-
-// ─── Legacy (calculator quotes) ──────────────────────────────────────────────
-export interface Quote {
-  id: string;
-  recipient_name: string;
-  destination: string;
-  length_cm: number;
-  width_cm: number;
-  height_cm: number;
-  weight_kg: number;
-  cubic_meter: number;
-  coefficient: number;
-  final_price: number;
-  created_at: string;
-}
-
-export interface CalculationInput {
-  recipient_name: string;
-  destination: string;
-  length_cm: number;
-  width_cm: number;
-  height_cm: number;
-  weight_kg: number;
-}
-
-export interface PricingSettings {
-  id: number;
-  coefficient: number;
-  updated_at?: string;
 }
 
 /** Personne connectée : son compte, sans les champs d'administration. */
-export interface UserSession extends Omit<AppUser, 'active' | 'created_at' | 'archived_at'> {
+export interface UserSession {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  agency: string;
+  agency_code: string;
   initials: string;
 }
 
@@ -190,6 +195,8 @@ export interface Shipment {
   type: 'sea' | 'air';
   origin: string;
   destination: string;
+  origin_code: string;
+  destination_code: string;
   status: ShipmentStatus;
   carrier: string;
   departure_date?: string;
@@ -197,28 +204,10 @@ export interface Shipment {
   actual_arrival?: string;
   max_volume_cbm: number;
   current_volume_cbm: number;
-  package_ids: string[];
+  package_count: number;
   notes?: string;
   created_at: string;
 }
-
-export const BTS_ORIGINS: readonly [string, ...string[]] = [
-  'Guangzhou (Chine)',
-  'Yiwu (Chine)',
-  'Dubaï (EAU)',
-  'Istanbul (Turquie)',
-  'Paris / Le Havre (France)',
-];
-
-export const BTS_DESTINATIONS: readonly [string, ...string[]] = [
-  "Abidjan (Côte d'Ivoire)",
-  'Dakar (Sénégal)',
-  'Bamako (Mali)',
-  'Ouagadougou (Burkina Faso)',
-  'Douala (Cameroun)',
-  'Lomé (Togo)',
-  'Cotonou (Bénin)',
-];
 
 // ─── Pricing grid ────────────────────────────────────────────────────────────
 export type TransportMode = 'sea' | 'air';
@@ -263,8 +252,12 @@ export interface AppUser {
   email: string;
   phone?: string;
   role: UserRole;
+  /** Libellé de l'agence ; son code sert aux formulaires. */
   agency: string;
+  agency_code: string;
   active: boolean;
+  /** Vrai tant que la personne invitée n'a pas choisi son mot de passe. */
+  invitation_pending: boolean;
   created_at: string;
   /**
    * Renseigné quand la personne a supprimé son compte. Le compte n'est jamais effacé :
@@ -273,7 +266,13 @@ export interface AppUser {
   archived_at?: string;
 }
 
-export type AppUserInput = Omit<AppUser, 'id' | 'created_at' | 'active' | 'archived_at'>;
+export interface AppUserInput {
+  name: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  agency_code: string;
+}
 
 // ─── Staff notifications ─────────────────────────────────────────────────────
 export type NotificationCategory = 'package' | 'payment' | 'email';
@@ -307,4 +306,12 @@ export interface AppNotification {
   created_at: string;
 }
 
-export type NewNotification = Omit<AppNotification, 'id' | 'read' | 'created_at'>;
+// ─── Lieux du réseau ─────────────────────────────────────────────────────────
+export interface NetworkLocation {
+  code: string;
+  name: string;
+  country_code: string;
+  is_origin: boolean;
+  is_destination: boolean;
+  agency: { code: string; name: string } | null;
+}

@@ -1,13 +1,13 @@
 import { Mail, MapPin, Phone } from 'lucide-react';
+import type { Client } from '@/types';
 import { formatPrice } from '@/utils/formatters';
-import type { ClientWithBalance } from '../clientPackages';
 
 interface ClientCardProps {
-  client: ClientWithBalance;
+  client: Client;
   onOpen: () => void;
 }
 
-/** Carte de l'annuaire : coordonnées du client et solde restant dû. */
+/** Carte de l'annuaire : coordonnées du client et solde restant dû, en rouge s'il est impayé. */
 export function ClientCard({ client, onOpen }: ClientCardProps) {
   return (
     <div
@@ -18,16 +18,16 @@ export function ClientCard({ client, onOpen }: ClientCardProps) {
         <div className="flex items-start justify-between">
           <div>
             <h3
-              className={`text-base font-bold ${client.balance > 0 ? 'text-red-700' : 'text-slate-800'}`}
+              className={`text-base font-bold ${client.has_debt ? 'text-red-700' : 'text-slate-800'}`}
             >
               {client.name}
             </h3>
-            {client.balance > 0 && (
+            {client.has_debt && (
               <span className="my-1 block w-fit rounded-sm bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white uppercase">
                 Impayé
               </span>
             )}
-            <span className="font-mono text-[11px] text-slate-400">ID: {client.id}</span>
+            <span className="text-[11px] text-slate-400">Agence : {client.agency_name}</span>
           </div>
         </div>
 
@@ -55,9 +55,9 @@ export function ClientCard({ client, onOpen }: ClientCardProps) {
         <div>
           <span className="block text-[10px] font-semibold text-slate-400 uppercase">Solde Dû</span>
           <span
-            className={`text-sm font-bold ${client.balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}
+            className={`text-sm font-bold ${client.has_debt ? 'text-red-600' : 'text-emerald-600'}`}
           >
-            {formatPrice(client.balance)}
+            {formatPrice(Math.max(0, client.balance))}
           </span>
         </div>
         <button type="button" className="text-xs font-semibold text-[#003366] hover:underline">

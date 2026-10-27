@@ -1,9 +1,7 @@
 import {
   Bell,
-  Calculator,
   CreditCard,
   ExternalLink,
-  FileText,
   LayoutDashboard,
   LogOut,
   Package,
@@ -49,8 +47,6 @@ const navSections: NavSection[] = [
     items: [
       { id: 'clients', label: 'Clients', icon: Users },
       { id: 'payments', label: 'Paiements & Caisse', icon: CreditCard },
-      { id: 'calculator', label: 'Calculateur devis', icon: Calculator },
-      { id: 'history', label: 'Historique calculs', icon: FileText },
     ],
   },
   {

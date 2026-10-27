@@ -3,14 +3,18 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import type { Agency } from '@/features/locations/useLocations';
+import { agencyOptions } from '@/features/locations/useLocations';
+import { errorMessage } from '@/lib/errorMessage';
 import type { AppUser, AppUserInput } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS, USER_ROLE_DESCRIPTIONS, USER_ROLE_LABELS } from '@/types';
+import { USER_ROLE_DESCRIPTIONS, USER_ROLE_LABELS } from '@/types';
 import { isValidEmail, isValidPhone } from '@/utils/validators';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
-import { labelsToOptions, toOptions } from '@/utils/selectOptions';
+import { labelsToOptions } from '@/utils/selectOptions';
 
 interface UserFormModalProps {
   user: AppUser | null;
+  agencies: readonly Agency[];
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (input: AppUserInput) => Promise<void>;
@@ -21,27 +25,27 @@ const PHONE_ERROR =
 
 type FieldErrors = Partial<Record<keyof AppUserInput | 'form', string>>;
 
-const AGENCIES = [...BTS_ORIGINS, ...BTS_DESTINATIONS];
-const EMPTY_INPUT: AppUserInput = {
-  name: '',
-  email: '',
-  phone: '',
-  role: 'collector',
-  agency: BTS_ORIGINS[0],
-};
-function toInput(user: AppUser | null): AppUserInput {
-  if (!user) return EMPTY_INPUT;
+function toInput(user: AppUser | null, agencies: readonly Agency[]): AppUserInput {
+  if (!user) {
+    return {
+      name: '',
+      email: '',
+      phone: '',
+      role: 'collector',
+      agency_code: agencies[0]?.code ?? '',
+    };
+  }
   return {
     name: user.name,
     email: user.email,
     phone: user.phone ?? '',
     role: user.role,
-    agency: user.agency,
+    agency_code: user.agency_code,
   };
 }
 
-export function UserFormModal({ user, isOpen, onClose, onSubmit }: UserFormModalProps) {
-  const [values, setValues] = useState<AppUserInput>(() => toInput(user));
+export function UserFormModal({ user, agencies, isOpen, onClose, onSubmit }: UserFormModalProps) {
+  const [values, setValues] = useState<AppUserInput>(() => toInput(user, agencies));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const isEdit = Boolean(user);
@@ -68,11 +72,7 @@ export function UserFormModal({ user, isOpen, onClose, onSubmit }: UserFormModal
       await onSubmit({ ...values, name: values.name.trim(), email: values.email.trim() });
       onClose();
     } catch (error) {
-      const message =
-        error instanceof Error && error.message === 'EMAIL_ALREADY_USED'
-          ? 'Cette adresse e-mail est déjà utilisée par un autre compte.'
-          : 'L’enregistrement a échoué. Réessayez.';
-      setErrors({ form: message });
+      setErrors({ form: errorMessage(error, 'L’enregistrement a échoué. Réessayez.') });
     } finally {
       setSaving(false);
     }
@@ -156,9 +156,9 @@ export function UserFormModal({ user, isOpen, onClose, onSubmit }: UserFormModal
           </label>
           <SearchableSelect
             id="user-agency"
-            value={values.agency}
-            onChange={(agency) => update('agency', agency)}
-            options={toOptions(AGENCIES)}
+            value={values.agency_code}
+            onChange={(code) => update('agency_code', code)}
+            options={agencyOptions(agencies)}
           />
         </div>
 

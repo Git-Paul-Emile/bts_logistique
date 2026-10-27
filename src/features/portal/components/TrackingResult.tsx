@@ -1,5 +1,5 @@
 import { AlertCircle, Check, MapPin, Printer } from 'lucide-react';
-import type { Package } from '@/types';
+import type { PublicTracking } from '@/api/endpoints/tracking.api';
 import { PACKAGE_STATUS_LABELS } from '@/types';
 import { formatDate, formatDateTime, formatVolume } from '@/utils/formatters';
 import { TRACKING_STEPS } from '../portal.content';
@@ -7,7 +7,7 @@ import { getTrackingStep } from '../hooks/usePackageTracking';
 
 interface TrackingResultProps {
   searchedCode: string;
-  pkg: Package | null;
+  pkg: PublicTracking | null;
 }
 
 export function TrackingResult({ searchedCode, pkg }: TrackingResultProps) {
@@ -36,7 +36,7 @@ function NotFound({ code }: { code: string }) {
   );
 }
 
-function PackageDetails({ pkg }: { pkg: Package }) {
+function PackageDetails({ pkg }: { pkg: PublicTracking }) {
   const currentStep = getTrackingStep(pkg.status);
   const progressPercent = ((currentStep - 1) / (TRACKING_STEPS.length - 1)) * 100;
   const specs = [
@@ -53,8 +53,7 @@ function PackageDetails({ pkg }: { pkg: Package }) {
           <p className="text-xs font-semibold text-bts-green-400">Numéro de suivi</p>
           <h3 className="mt-1 font-code text-2xl font-semibold">{pkg.tracking_number}</h3>
           <p className="mt-1 text-sm text-white/70">
-            Enregistré le {formatDate(pkg.created_at)}
-            {pkg.client_name && <>, destinataire : {pkg.client_name}</>}
+            Enregistré le {formatDate(pkg.created_at)}, destinataire : {pkg.recipient_initials}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -132,7 +131,7 @@ function PackageDetails({ pkg }: { pkg: Package }) {
         {pkg.events && pkg.events.length > 0 ? (
           <ol className="mt-4 border-l-2 border-slate-200 pl-6">
             {pkg.events.map((event, index) => (
-              <li key={event.id} className="relative pb-5 last:pb-0">
+              <li key={`${event.date}-${index}`} className="relative pb-5 last:pb-0">
                 <span
                   className={`absolute top-1 left-[-31px] h-3 w-3 rounded-full ring-4 ring-white ${
                     index === 0 ? 'bg-bts-green' : 'bg-slate-300'
@@ -143,8 +142,8 @@ function PackageDetails({ pkg }: { pkg: Package }) {
                   <p className="text-sm font-semibold text-bts-dark">
                     {PACKAGE_STATUS_LABELS[event.status] ?? event.status}
                   </p>
-                  <time dateTime={event.created_at} className="text-xs text-slate-500">
-                    {formatDateTime(event.created_at)}
+                  <time dateTime={event.date} className="text-xs text-slate-500">
+                    {formatDateTime(event.date)}
                   </time>
                 </div>
                 {event.location && (
@@ -152,7 +151,6 @@ function PackageDetails({ pkg }: { pkg: Package }) {
                     <MapPin size={14} aria-hidden="true" /> {event.location}
                   </p>
                 )}
-                {event.comment && <p className="mt-1 text-sm text-slate-600">{event.comment}</p>}
               </li>
             ))}
           </ol>

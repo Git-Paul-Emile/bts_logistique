@@ -2,13 +2,15 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { errorMessage } from '@/lib/errorMessage';
 import { formatDateTime } from '@/utils/formatDate';
 import { formatPrice } from '@/utils/formatters';
 import type { PricingGrid, TransportMode } from '@/types';
 import { TRANSPORT_MODE_LABELS } from '@/types';
 
 interface PricingSettingsFormProps {
-  grid: PricingGrid;
+  /** null tant qu'aucune grille n'a été enregistrée (premier démarrage). */
+  grid: PricingGrid | null;
   onSave: (rates: PricingGrid['rates']) => Promise<void>;
 }
 
@@ -18,12 +20,12 @@ type FormErrors = Partial<Record<`${TransportMode}.${RateField}`, string>>;
 
 const MODES = Object.keys(TRANSPORT_MODE_LABELS) as TransportMode[];
 
-function toFormValues(grid: PricingGrid): FormValues {
+function toFormValues(grid: PricingGrid | null): FormValues {
   const values = {} as FormValues;
   for (const mode of MODES) {
     values[mode] = {
-      client_rate_per_cbm: String(grid.rates[mode].client_rate_per_cbm),
-      collector_margin_per_cbm: String(grid.rates[mode].collector_margin_per_cbm),
+      client_rate_per_cbm: grid ? String(grid.rates[mode].client_rate_per_cbm) : '',
+      collector_margin_per_cbm: grid ? String(grid.rates[mode].collector_margin_per_cbm) : '',
     };
   }
   return values;
@@ -35,12 +37,13 @@ function validate(values: FormValues): FormErrors {
     const label = TRANSPORT_MODE_LABELS[mode].toLowerCase();
     const clientRate = Number(values[mode].client_rate_per_cbm);
     const margin = Number(values[mode].collector_margin_per_cbm);
-    if (!Number.isFinite(clientRate) || clientRate <= 0) {
-      errors[`${mode}.client_rate_per_cbm`] = `Saisissez un prix ${label} supérieur à 0.`;
+    if (!Number.isInteger(clientRate) || clientRate <= 0) {
+      errors[`${mode}.client_rate_per_cbm`] =
+        `Saisissez un prix ${label} en F CFA, nombre entier supérieur à 0.`;
     }
-    if (!Number.isFinite(margin) || margin < 0) {
+    if (!Number.isInteger(margin) || margin < 0) {
       errors[`${mode}.collector_margin_per_cbm`] =
-        'La marge ne peut pas être négative. Saisissez 0 si aucune marge.';
+        'Saisissez une marge en F CFA, nombre entier, ou 0 si aucune marge.';
     } else if (margin >= clientRate) {
       errors[`${mode}.collector_margin_per_cbm`] =
         'La marge doit rester inférieure au prix client.';
@@ -53,6 +56,7 @@ export function PricingSettingsForm({ grid, onSave }: PricingSettingsFormProps) 
   const [values, setValues] = useState<FormValues>(() => toFormValues(grid));
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const updateValue = (mode: TransportMode, field: RateField, value: string) => {
     setErrors((previous) => ({ ...previous, [`${mode}.${field}`]: undefined }));
@@ -74,8 +78,11 @@ export function PricingSettingsForm({ grid, onSave }: PricingSettingsFormProps) 
       };
     }
     setSaving(true);
+    setFormError('');
     try {
       await onSave(rates);
+    } catch (error) {
+      setFormError(errorMessage(error, 'Les tarifs n’ont pas pu être enregistrés. Réessayez.'));
     } finally {
       setSaving(false);
     }
@@ -92,11 +99,21 @@ export function PricingSettingsForm({ grid, onSave }: PricingSettingsFormProps) 
           marge collecteur est un montant fixe par m³, comprise dans ce prix.
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Dernière modification : {formatDateTime(grid.updated_at)}
+          {grid
+            ? `Dernière modification : ${formatDateTime(grid.updated_at)}`
+            : 'Aucun tarif enregistré : les colis ne peuvent pas être enregistrés avant la saisie de cette grille.'}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {formError}
+          </p>
+        )}
         <div className="grid gap-6 lg:grid-cols-2">
           {MODES.map((mode) => {
             const clientRate = Number(values[mode].client_rate_per_cbm) || 0;

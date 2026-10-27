@@ -5,7 +5,8 @@ import { MailCheck } from 'lucide-react';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { authApi } from '@/api/endpoints/auth.api';
+import { useRequestPasswordReset } from '@/features/auth/hooks/useAccountMutations';
+import { errorMessage } from '@/lib/errorMessage';
 import { isValidEmail } from '@/utils/validators';
 import { PATHS } from '@/router/paths';
 
@@ -14,6 +15,7 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const requestPasswordReset = useRequestPasswordReset();
 
   const validateEmail = (value: string): string =>
     isValidEmail(value)
@@ -29,10 +31,15 @@ export function ForgotPasswordPage() {
     }
     setSubmitting(true);
     try {
-      await authApi.requestPasswordReset(email.trim());
+      await requestPasswordReset.mutateAsync(email.trim());
       setSent(true);
-    } catch {
-      setError('La demande n’a pas pu être envoyée. Vérifiez votre connexion puis réessayez.');
+    } catch (requestError) {
+      setError(
+        errorMessage(
+          requestError,
+          'La demande n’a pas pu être envoyée. Vérifiez votre connexion puis réessayez.'
+        )
+      );
     } finally {
       setSubmitting(false);
     }

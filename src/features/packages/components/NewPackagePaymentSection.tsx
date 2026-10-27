@@ -1,5 +1,8 @@
 import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { PAYMENT_METHOD_LABELS } from '@/types';
+import { labelsToOptions } from '@/utils/selectOptions';
 import type { NewPackageForm, PaymentOption } from '../hooks/useNewPackageForm';
 
 const PAYMENT_OPTIONS: ReadonlyArray<{ id: PaymentOption; label: string }> = [
@@ -32,6 +35,18 @@ export function NewPackagePaymentSection({ form }: { form: NewPackageForm }) {
           </button>
         ))}
       </div>
+
+      {form.paymentOption !== 'unpaid' && (
+        <div className="pt-2">
+          <FieldLabel htmlFor="new-package-payment-method">Mode de règlement *</FieldLabel>
+          <SearchableSelect
+            id="new-package-payment-method"
+            value={form.paymentMethod}
+            onChange={form.setPaymentMethod}
+            options={labelsToOptions(PAYMENT_METHOD_LABELS)}
+          />
+        </div>
+      )}
 
       {form.paymentOption === 'partial' && (
         <div className="pt-2">

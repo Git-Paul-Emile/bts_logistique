@@ -93,7 +93,7 @@ export function ShipmentCard({ shipment: shp }: { shipment: Shipment }) {
           )}
           <p>
             Colis assignés :{' '}
-            <span className="font-bold text-[#003366]">{shp.package_ids.length} colis</span>
+            <span className="font-bold text-[#003366]">{shp.package_count} colis</span>
           </p>
         </div>
       </div>

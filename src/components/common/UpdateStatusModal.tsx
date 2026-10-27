@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import type { Package, PackageStatus, StatusUpdateHandler } from '@/types';
+import { useNotify } from '@/features/backoffice/NotifyContext';
+import { useAddPackageEvent } from '@/features/packages/hooks/usePackages';
+import { errorMessage } from '@/lib/errorMessage';
+import type { Package, PackageStatus } from '@/types';
+import { PACKAGE_STATUS_LABELS } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,12 +13,11 @@ interface UpdateStatusModalProps {
   pkg: Package | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: StatusUpdateHandler;
 }
 
 interface StatusFormErrors {
   location?: string;
-  agentName?: string;
+  form?: string;
 }
 
 const statusOptions: { value: PackageStatus; label: string }[] = [
@@ -27,12 +30,17 @@ const statusOptions: { value: PackageStatus; label: string }[] = [
   { value: 'cancelled', label: 'Annulé' },
 ];
 
-export function UpdateStatusModal({ pkg, isOpen, onClose, onUpdate }: UpdateStatusModalProps) {
+/**
+ * Nouvelle étape de suivi. La personne connectée est enregistrée comme agent par le serveur ;
+ * l'e-mail au client part en différé, sa trace apparaît dans les notifications.
+ */
+export function UpdateStatusModal({ pkg, isOpen, onClose }: UpdateStatusModalProps) {
   const [selectedStatus, setSelectedStatus] = useState<PackageStatus>(pkg?.status ?? 'registered');
   const [location, setLocation] = useState(pkg?.destination ?? '');
   const [comment, setComment] = useState('');
-  const [agentName, setAgentName] = useState('Thomas Lefèvre (Gestionnaire)');
   const [notifyClient, setNotifyClient] = useState(true);
+  const addEvent = useAddPackageEvent();
+  const notify = useNotify();
   const [errors, setErrors] = useState<StatusFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,15 +52,21 @@ export function UpdateStatusModal({ pkg, isOpen, onClose, onUpdate }: UpdateStat
     if (!location.trim()) {
       nextErrors.location = 'Indiquez où se trouve le colis, par exemple « Port d’Abidjan ».';
     }
-    if (!agentName.trim()) {
-      nextErrors.agentName = 'Indiquez le nom de l’agent qui fait la mise à jour.';
-    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
     setIsSubmitting(true);
     try {
-      await onUpdate(pkg.id, selectedStatus, location, comment, agentName, notifyClient);
+      const updated = await addEvent.mutateAsync({
+        id: pkg.id,
+        input: { status: selectedStatus, location: location.trim(), comment, notifyClient },
+      });
+      notify(
+        `Statut de ${updated.tracking_number} : ${PACKAGE_STATUS_LABELS[updated.status]}.` +
+          (notifyClient ? ' Le client sera prévenu par e-mail s’il a une adresse.' : '')
+      );
       onClose();
+    } catch (error) {
+      setErrors({ form: errorMessage(error, 'Le statut n’a pas pu être modifié. Réessayez.') });
     } finally {
       setIsSubmitting(false);
     }
@@ -66,6 +80,14 @@ export function UpdateStatusModal({ pkg, isOpen, onClose, onUpdate }: UpdateStat
       maxWidth="xl"
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {errors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {errors.form}
+          </p>
+        )}
         <div>
           <label
             htmlFor="package-status"
@@ -114,24 +136,6 @@ export function UpdateStatusModal({ pkg, isOpen, onClose, onUpdate }: UpdateStat
             rows={3}
             placeholder="Ex: Dédouanement terminé sans incident. Colis prêt pour remise en agence."
             className="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-800 shadow-xs focus:border-[#003366] focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="status-agent"
-            className="mb-1 block text-xs font-semibold text-slate-700 uppercase"
-          >
-            Agent responsable *
-          </label>
-          <Input
-            id="status-agent"
-            value={agentName}
-            error={errors.agentName}
-            onChange={(e) => {
-              setErrors((previous) => ({ ...previous, agentName: undefined }));
-              setAgentName(e.target.value);
-            }}
           />
         </div>
 

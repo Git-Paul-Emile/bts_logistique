@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
-import type { Package, Payment } from '@/types';
+import type { DashboardSummary } from '@/api/endpoints/dashboard.api';
 import { formatPrice } from '@/utils/formatters';
 
 interface PaymentStatCardProps {
@@ -33,46 +32,48 @@ function PaymentStatCard({
   );
 }
 
+interface PaymentStatsProps {
+  /** Chiffres calculés par le serveur pour le mois en cours. */
+  finance: NonNullable<DashboardSummary['finance']>;
+  /** Nombre de paiements enregistrés, annulations comprises. */
+  transactionCount: number;
+}
+
 /** Les quatre indicateurs de caisse : encaissé, reste à recouvrer, facturé, transactions. */
-export function PaymentStats({ packages, payments }: { packages: Package[]; payments: Payment[] }) {
-  const stats = useMemo(() => {
-    const totalBilled = packages.reduce((acc, p) => acc + p.final_price, 0);
-    const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
-    const pendingRecovery = Math.max(0, totalBilled - totalCollected);
-    const recoveryRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 100;
-    return { totalBilled, totalCollected, pendingRecovery, recoveryRate };
-  }, [packages, payments]);
+export function PaymentStats({ finance, transactionCount }: PaymentStatsProps) {
+  const recoveryRate =
+    finance.revenue > 0 ? Math.round((finance.collected / finance.revenue) * 100) : 100;
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <PaymentStatCard
-        label="Total Encaissé"
-        value={formatPrice(stats.totalCollected)}
-        hint={`Taux de recouvrement : ${stats.recoveryRate}%`}
+        label="Encaissé ce mois"
+        value={formatPrice(finance.collected)}
+        hint={`Taux de recouvrement du mois : ${recoveryRate}%`}
         icon={CheckCircle}
         iconClass="text-emerald-500"
         valueClass="text-emerald-600"
       />
       <PaymentStatCard
         label="Reste à Recouvrer"
-        value={formatPrice(stats.pendingRecovery)}
-        hint="Créances clients en cours"
+        value={formatPrice(finance.total_due)}
+        hint={`${finance.debtor_count} client${finance.debtor_count > 1 ? 's' : ''} avec un impayé`}
         icon={AlertCircle}
         iconClass="text-amber-500"
         valueClass="text-amber-600"
       />
       <PaymentStatCard
-        label="Chiffre d'Affaires"
-        value={formatPrice(stats.totalBilled)}
-        hint="Volume facturé cumulé"
+        label="Chiffre d'Affaires du mois"
+        value={formatPrice(finance.revenue)}
+        hint="Prix des colis enregistrés ce mois"
         icon={TrendingUp}
         iconClass="text-[#003366]"
         valueClass="text-slate-800"
       />
       <PaymentStatCard
         label="Transactions"
-        value={payments.length}
-        hint="Reçus délivrés"
+        value={transactionCount}
+        hint="Paiements enregistrés"
         icon={DollarSign}
         iconClass="text-indigo-500"
         valueClass="text-indigo-700"

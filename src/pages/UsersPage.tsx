@@ -2,56 +2,56 @@ import { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/common/Loader';
+import { LoadError } from '@/components/common/LoadError';
+import { Pagination } from '@/components/ui/Pagination';
 import { UserFormModal } from '@/features/users/components/UserFormModal';
 import { ArchivedUsersTable } from '@/features/users/components/ArchivedUsersTable';
 import { CurrentUsersTable } from '@/features/users/components/CurrentUsersTable';
-import { useUsers } from '@/features/users/hooks/useUsers';
-import type { AppUser, AppUserInput } from '@/types';
+import { useUserActions, useUserList } from '@/features/users/hooks/useUsers';
+import type { AppUser } from '@/types';
 import { useAuth } from '@/context/useAuth';
+import { useNotify } from '@/features/backoffice/NotifyContext';
 import { ImportExcelButton } from '@/features/import/components/ImportExcelButton';
-import type { UserImportPatch } from '@/features/import/definitions/users.import';
-import { userImportContext, usersImport } from '@/features/import/definitions/users.import';
-import { importedMessage } from '@/features/import/importMessage';
-import type { ImportBatch } from '@/features/import/importTypes';
+import { usersImport } from '@/features/import/definitions/users.import';
+import { loadUserImportContext } from '@/features/import/importContexts';
+import { useImportHandlers } from '@/features/import/useImportHandlers';
+import { useLocations } from '@/features/locations/useLocations';
+import { errorMessage } from '@/lib/errorMessage';
 
-interface UsersPageProps {
-  onNotify: (message: string) => void;
-}
+const PAGE_SIZE = 25;
 
 type UsersTab = 'current' | 'archived';
 
 // null = fermé ; 'new' = création ; AppUser = modification de ce compte.
 type EditorState = null | 'new' | AppUser;
 
-export function UsersPage({ onNotify }: UsersPageProps) {
-  const { users, loading, createUser, updateUser, toggleActive, restoreUser } = useUsers();
+export function UsersPage() {
   const [tab, setTab] = useState<UsersTab>('current');
-  const currentUsers = users.filter((user) => !user.archived_at);
-  const archivedUsers = users.filter((user) => user.archived_at);
-  const { user: currentUser } = useAuth();
-
-  const handleImport = async ({
-    creates,
-    completions,
-  }: ImportBatch<AppUserInput, UserImportPatch>) => {
-    for (const item of creates) await createUser(item);
-    for (const { targetId, changes } of completions) {
-      const target = users.find((user) => user.id === targetId);
-      if (!target) continue;
-      const { name, email, phone, role, agency } = { ...target, ...changes };
-      await updateUser(targetId, { name, email, phone, role, agency });
-    }
-    onNotify(importedMessage(usersImport, creates.length, completions.length));
-  };
+  const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<EditorState>(null);
+  const users = useUserList({ page, limit: PAGE_SIZE, archived: tab === 'archived' });
+  const { inviteUser, updateUser, setUserActive, restoreUser } = useUserActions();
+  const { agencies } = useLocations();
+  const { importUsers } = useImportHandlers();
+  const { user: currentUser } = useAuth();
+  const notify = useNotify();
 
   const handleToggle = async (user: AppUser) => {
-    const updated = await toggleActive(user);
-    onNotify(
-      updated.active
-        ? `Compte de ${updated.name} réactivé.`
-        : `Compte de ${updated.name} désactivé.`
-    );
+    try {
+      const updated = await setUserActive(user.id, !user.active);
+      notify(
+        updated.active
+          ? `Compte de ${updated.name} réactivé.`
+          : `Compte de ${updated.name} désactivé.`
+      );
+    } catch (error) {
+      notify(errorMessage(error, 'Le compte n’a pas pu être modifié. Réessayez.'));
+    }
+  };
+
+  const changeTab = (next: UsersTab) => {
+    setTab(next);
+    setPage(1);
   };
 
   return (
@@ -69,10 +69,14 @@ export function UsersPage({ onNotify }: UsersPageProps) {
         <div className="flex flex-wrap gap-2">
           <ImportExcelButton
             definition={usersImport}
-            getContext={() => userImportContext(users)}
-            onImport={handleImport}
+            getContext={loadUserImportContext}
+            onImport={importUsers}
           />
-          <Button icon={<UserPlus size={16} />} onClick={() => setEditor('new')}>
+          <Button
+            icon={<UserPlus size={16} />}
+            disabled={agencies.length === 0}
+            onClick={() => setEditor('new')}
+          >
             Ajouter un utilisateur
           </Button>
         </div>
@@ -85,8 +89,8 @@ export function UsersPage({ onNotify }: UsersPageProps) {
       >
         {(
           [
-            { value: 'current', label: `Comptes (${currentUsers.length})` },
-            { value: 'archived', label: `Archivés (${archivedUsers.length})` },
+            { value: 'current', label: 'Comptes' },
+            { value: 'archived', label: 'Archivés' },
           ] as const
         ).map((item) => (
           <button
@@ -94,7 +98,7 @@ export function UsersPage({ onNotify }: UsersPageProps) {
             type="button"
             role="tab"
             aria-selected={tab === item.value}
-            onClick={() => setTab(item.value)}
+            onClick={() => changeTab(item.value)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold transition ${
               tab === item.value
                 ? 'border-[#003366] text-[#003366]'
@@ -102,44 +106,58 @@ export function UsersPage({ onNotify }: UsersPageProps) {
             }`}
           >
             {item.label}
+            {tab === item.value && users.data ? ` (${users.data.meta.total})` : ''}
           </button>
         ))}
       </div>
 
-      {loading && <Loader label="Chargement des comptes..." />}
+      {users.isPending && <Loader label="Chargement des comptes..." />}
+      {users.isError && (
+        <LoadError
+          message="Les comptes n’ont pas pu être chargés."
+          onRetry={() => void users.refetch()}
+        />
+      )}
 
-      {!loading && tab === 'archived' && (
+      {users.data && tab === 'archived' && (
         <ArchivedUsersTable
-          users={archivedUsers}
+          users={users.data.items}
           onRestore={async (user) => {
-            await restoreUser(user);
-            onNotify(`Compte de ${user.name} restauré. La personne peut de nouveau se connecter.`);
+            try {
+              await restoreUser(user.id);
+              notify(`Compte de ${user.name} restauré. La personne peut de nouveau se connecter.`);
+            } catch (error) {
+              notify(errorMessage(error, 'Le compte n’a pas pu être restauré. Réessayez.'));
+            }
           }}
         />
       )}
 
-      {!loading && tab === 'current' && (
+      {users.data && tab === 'current' && (
         <CurrentUsersTable
-          users={currentUsers}
+          users={users.data.items}
           currentUserId={currentUser?.id}
           onEdit={setEditor}
           onToggle={handleToggle}
         />
       )}
 
+      <Pagination meta={users.data?.meta} onPageChange={setPage} itemLabel="comptes" />
+
       {editor && (
         <UserFormModal
           key={editor === 'new' ? 'new' : editor.id}
           user={editor === 'new' ? null : editor}
+          agencies={agencies}
           isOpen
           onClose={() => setEditor(null)}
           onSubmit={async (input) => {
             if (editor === 'new') {
-              const created = await createUser(input);
-              onNotify(`Invitation envoyée à ${created.email}.`);
+              const created = await inviteUser(input);
+              notify(`Invitation envoyée à ${created.email}.`);
             } else {
               await updateUser(editor.id, input);
-              onNotify('Compte mis à jour.');
+              notify('Compte mis à jour.');
             }
           }}
         />

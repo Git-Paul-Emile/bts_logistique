@@ -5,3 +5,5 @@ Disallow: /connexion
 Disallow: /mot-de-passe-oublie
 Disallow: /reinitialiser-mot-de-passe
 Disallow: /suivi/
+Disallow: /activer-mon-compte
+Disallow: /confirmer-email

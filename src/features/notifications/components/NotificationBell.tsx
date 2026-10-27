@@ -2,7 +2,11 @@ import { useCallback, useRef, useState } from 'react';
 import { useDismiss } from '@/hooks/useDismiss';
 import { Bell } from 'lucide-react';
 import type { AppNotification } from '@/types';
-import { useNotifications } from '../hooks/useNotifications';
+import {
+  useNotificationActions,
+  useNotificationList,
+  useUnreadCount,
+} from '../hooks/useNotifications';
 import { NotificationItemContent } from './NotificationItemContent';
 
 const PREVIEW_LIMIT = 6;
@@ -15,11 +19,14 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({ onOpenPackage, onOpenAll }: NotificationBellProps) {
-  const { notifications, unreadCount, setRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const unreadCount = useUnreadCount().data ?? 0;
+  // Les dernières notifications ne sont chargées qu'à l'ouverture du panneau.
+  const preview = useNotificationList({ limit: PREVIEW_LIMIT }, open);
+  const { setRead, markAllAsRead } = useNotificationActions();
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const latest = notifications.slice(0, PREVIEW_LIMIT);
+  const latest = preview.data?.items ?? [];
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, close, containerRef, buttonRef);
@@ -78,7 +85,13 @@ export function NotificationBell({ onOpenPackage, onOpenAll }: NotificationBellP
             )}
           </div>
 
-          {latest.length === 0 ? (
+          {preview.isPending ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-500">Chargement...</p>
+          ) : preview.isError ? (
+            <p role="alert" className="px-4 py-8 text-center text-sm text-red-700">
+              Les notifications n’ont pas pu être chargées.
+            </p>
+          ) : latest.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-slate-500">
               Aucune notification pour le moment.
             </p>

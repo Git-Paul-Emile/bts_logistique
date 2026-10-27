@@ -6,6 +6,9 @@ export const PATHS = {
   login: '/connexion',
   forgotPassword: '/mot-de-passe-oublie',
   resetPassword: '/reinitialiser-mot-de-passe',
+  // Chemins des liens envoyés par e-mail : ils doivent rester identiques à ceux du back.
+  acceptInvitation: '/activer-mon-compte',
+  confirmEmail: '/confirmer-email',
   admin: '/admin',
 } as const;
 

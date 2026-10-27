@@ -50,6 +50,11 @@ export function CurrentUsersTable({
                   )}
                 </p>
                 <p className="text-xs text-slate-500">{user.email}</p>
+                {user.invitation_pending && (
+                  <p className="text-xs font-medium text-amber-700">
+                    Invitation envoyée, mot de passe pas encore choisi
+                  </p>
+                )}
               </td>
               <td className="px-4 py-3">{USER_ROLE_LABELS[user.role]}</td>
               <td className="px-4 py-3 text-slate-600">{user.agency}</td>

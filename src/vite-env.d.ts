@@ -1,7 +1,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
-  readonly VITE_SUPABASE_URL?: string;
-  readonly VITE_SUPABASE_ANON_KEY?: string;
+  /** Adresse publique du site, pour les URL canoniques et le plan du site (sitemap.xml). */
+  readonly VITE_SITE_URL?: string;
 }
 
 interface ImportMeta {

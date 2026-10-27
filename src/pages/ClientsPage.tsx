@@ -1,57 +1,42 @@
-﻿import { useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search, Users } from 'lucide-react';
 import { EditClientModal } from '@/components/common/EditClientModal';
+import { Loader } from '@/components/common/Loader';
+import { LoadError } from '@/components/common/LoadError';
 import { Button } from '@/components/ui/Button';
-import { withBalances } from '@/features/clients/clientPackages';
+import { Pagination } from '@/components/ui/Pagination';
+import { useBackOfficeNavigation } from '@/features/backoffice/NavigationContext';
+import { useNotify } from '@/features/backoffice/NotifyContext';
 import { ClientCard } from '@/features/clients/components/ClientCard';
 import { ClientDetailModal } from '@/features/clients/components/ClientDetailModal';
-import type { NewClientData } from '@/features/clients/components/NewClientModal';
 import { NewClientModal } from '@/features/clients/components/NewClientModal';
+import {
+  useClientList,
+  useCreateClient,
+  useUpdateClient,
+} from '@/features/clients/hooks/useClients';
 import { ImportExcelButton } from '@/features/import/components/ImportExcelButton';
-import type {
-  ClientImportItem,
-  ClientImportPatch,
-} from '@/features/import/definitions/clients.import';
-import { clientImportContext, clientsImport } from '@/features/import/definitions/clients.import';
-import type { ImportBatch } from '@/features/import/importTypes';
-import type { Client, ClientUpdateInput, Package, Payment } from '@/types';
+import { clientsImport } from '@/features/import/definitions/clients.import';
+import { loadClientImportContext } from '@/features/import/importContexts';
+import { useImportHandlers } from '@/features/import/useImportHandlers';
+import { useDebounce } from '@/hooks/useDebounce';
+import type { Client } from '@/types';
 
-interface ClientsPageProps {
-  clients: Client[];
-  packages: Package[];
-  payments: Payment[];
-  onCreateClient: (data: NewClientData) => Promise<Client>;
-  onUpdateClient: (id: string, changes: ClientUpdateInput) => Promise<void>;
-  onImportClients: (batch: ImportBatch<ClientImportItem, ClientImportPatch>) => Promise<void>;
-  onSelectPackage?: (pkg: Package) => void;
-}
+const PAGE_SIZE = 24;
 
-export function ClientsPage({
-  clients,
-  packages,
-  payments,
-  onCreateClient,
-  onUpdateClient,
-  onImportClients,
-  onSelectPackage,
-}: ClientsPageProps) {
+export function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-
-  const clientData = useMemo(() => withBalances(clients, packages), [clients, packages]);
-
-  const filteredClients = useMemo(() => {
-    const query = search.toLowerCase();
-    return clientData.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query) ||
-        c.phone.toLowerCase().includes(query) ||
-        (c.email && c.email.toLowerCase().includes(query)) ||
-        (c.address && c.address.toLowerCase().includes(query))
-    );
-  }, [clientData, search]);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(search.trim());
+  const clients = useClientList({ page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const createClient = useCreateClient();
+  const updateClient = useUpdateClient();
+  const { importClients } = useImportHandlers();
+  const { openPackage } = useBackOfficeNavigation();
+  const notify = useNotify();
 
   return (
     <div className="space-y-6">
@@ -67,8 +52,8 @@ export function ClientsPage({
         <div className="flex flex-wrap gap-2">
           <ImportExcelButton
             definition={clientsImport}
-            getContext={() => clientImportContext(clients)}
-            onImport={onImportClients}
+            getContext={loadClientImportContext}
+            onImport={importClients}
           />
           <Button
             onClick={() => setIsNewModalOpen(true)}
@@ -82,37 +67,67 @@ export function ClientsPage({
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="relative">
+          <label htmlFor="client-search" className="sr-only">
+            Rechercher un client
+          </label>
           <Search size={18} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400" />
           <input
-            type="text"
+            id="client-search"
+            type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par nom, téléphone, email ou ville..."
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Rechercher par nom, téléphone ou email..."
             className="w-full rounded-lg border border-slate-300 py-2 pr-4 pl-10 text-sm focus:border-[#003366] focus:outline-hidden"
           />
         </div>
       </div>
 
+      {clients.isPending && <Loader label="Chargement des clients..." />}
+      {clients.isError && (
+        <LoadError
+          message="Les clients n’ont pas pu être chargés."
+          onRetry={() => void clients.refetch()}
+        />
+      )}
+      {clients.data?.items.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
+          <Users size={36} aria-hidden="true" className="mx-auto mb-2 text-slate-300" />
+          <p className="font-semibold text-slate-700">
+            {debouncedSearch ? 'Aucun client ne correspond à cette recherche' : 'Aucun client'}
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredClients.map((client) => (
-          <ClientCard key={client.id} client={client} onOpen={() => setSelectedClient(client)} />
+        {clients.data?.items.map((client) => (
+          <ClientCard
+            key={client.id}
+            client={client}
+            onOpen={() => setSelectedClientId(client.id)}
+          />
         ))}
       </div>
+
+      <Pagination meta={clients.data?.meta} onPageChange={setPage} itemLabel="clients" />
 
       <NewClientModal
         isOpen={isNewModalOpen}
         onClose={() => setIsNewModalOpen(false)}
-        onCreate={onCreateClient}
+        onCreate={async (input) => {
+          const created = await createClient.mutateAsync(input);
+          notify(`Client ${created.name} créé avec succès.`);
+        }}
       />
 
-      {selectedClient && (
+      {selectedClientId && (
         <ClientDetailModal
-          client={selectedClient}
-          packages={packages}
-          payments={payments}
-          onClose={() => setSelectedClient(null)}
-          onEdit={() => setEditingClient(selectedClient)}
-          onSelectPackage={onSelectPackage}
+          clientId={selectedClientId}
+          onClose={() => setSelectedClientId(null)}
+          onEdit={setEditingClient}
+          onSelectPackage={openPackage}
         />
       )}
       {editingClient && (
@@ -121,10 +136,8 @@ export function ClientsPage({
           isOpen
           onClose={() => setEditingClient(null)}
           onSave={async (id, changes) => {
-            await onUpdateClient(id, changes);
-            setSelectedClient((previous) =>
-              previous && previous.id === id ? { ...previous, ...changes } : previous
-            );
+            const updated = await updateClient.mutateAsync({ id, changes });
+            notify(`Fiche de ${updated.name} mise à jour.`);
           }}
         />
       )}

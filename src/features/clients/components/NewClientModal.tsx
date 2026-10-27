@@ -3,18 +3,14 @@ import { Button } from '@/components/ui/Button';
 import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import type { Client } from '@/types';
+import type { NewClientInput } from '@/types';
+import { errorMessage } from '@/lib/errorMessage';
 import { CLIENT_ERRORS, isValidEmail, isValidPhone, validateClientInput } from '@/utils/validators';
-
-export type NewClientData = Omit<
-  Client,
-  'id' | 'created_at' | 'total_billed' | 'amount_paid' | 'package_count'
->;
 
 interface NewClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: NewClientData) => Promise<Client>;
+  onCreate: (data: NewClientInput) => Promise<void>;
 }
 
 /** Fenêtre « Ajouter un client ». La saisie est conservée si la fenêtre est fermée sans valider. */
@@ -48,6 +44,8 @@ export function NewClientModal({ isOpen, onClose, onCreate }: NewClientModalProp
       setPhone('');
       setEmail('');
       setAddress('');
+    } catch (error) {
+      setError('form', errorMessage(error, 'Le client n’a pas pu être créé. Réessayez.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -56,6 +54,14 @@ export function NewClientModal({ isOpen, onClose, onCreate }: NewClientModalProp
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ajouter un nouveau client" maxWidth="md">
       <form onSubmit={handleCreate} noValidate className="space-y-4">
+        {errors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {errors.form}
+          </p>
+        )}
         <div>
           <FieldLabel htmlFor="new-client-name">Nom complet / Raison Sociale *</FieldLabel>
           <Input

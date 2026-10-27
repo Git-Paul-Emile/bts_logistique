@@ -1,0 +1,21 @@
+// Clés du cache TanStack Query, en un seul endroit : une modification invalide les bonnes listes.
+export const queryKeys = {
+  session: ['session'] as const,
+  locations: ['locations'] as const,
+  publicPricing: ['pricing', 'public'] as const,
+  adminPricing: ['pricing', 'admin'] as const,
+  dashboardAll: ['dashboard'] as const,
+  dashboard: (month?: string) => ['dashboard', month ?? 'current'] as const,
+  packages: ['packages'] as const,
+  package: (id: string) => ['packages', 'detail', id] as const,
+  clients: ['clients'] as const,
+  client: (id: string) => ['clients', 'detail', id] as const,
+  payments: ['payments'] as const,
+  shipments: ['shipments'] as const,
+  shipmentPackages: (id: string) => ['shipments', 'packages', id] as const,
+  users: ['users'] as const,
+  notifications: ['notifications'] as const,
+  unreadCount: ['notifications', 'unread-count'] as const,
+  tracking: (trackingNumber: string) => ['tracking', trackingNumber] as const,
+  importFingerprints: (entity: string) => ['import-fingerprints', entity] as const,
+};

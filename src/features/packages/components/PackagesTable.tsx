@@ -7,7 +7,8 @@ interface PackageRowActions {
   onSelect: (pkg: Package) => void;
   onChangeStatus: (pkg: Package) => void;
   onPrint: (pkg: Package) => void;
-  onRecordPayment: (pkg: Package) => void;
+  /** Absent pour un collecteur : l'encaissement est réservé à l'équipe. */
+  onRecordPayment?: (pkg: Package) => void;
 }
 
 interface PackagesTableProps extends PackageRowActions {
@@ -108,7 +109,7 @@ function PackageRow({
           >
             <Printer size={17} />
           </button>
-          {pkg.payment_status !== 'paid' && (
+          {onRecordPayment && pkg.payment_status !== 'paid' && pkg.status !== 'cancelled' && (
             <button
               onClick={() => onRecordPayment(pkg)}
               title="Encaisser un paiement"

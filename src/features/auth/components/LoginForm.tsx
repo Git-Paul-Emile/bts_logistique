@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '@/context/useAuth';
+import { errorMessage } from '@/lib/errorMessage';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -25,9 +26,10 @@ function getEmailError(value: string): string | undefined {
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
-  const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('thomas.lefevre@bts-logistique.fr');
-  const [password, setPassword] = useState('••••••••');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
 
@@ -40,12 +42,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setFieldErrors(nextErrors);
     if (nextErrors.email || nextErrors.password) return;
     setError('');
+    setSubmitting(true);
     try {
-      await login(email);
+      await login({ email: email.trim(), password });
       if (onSuccess) onSuccess();
-    } catch {
-      // Même message pour un compte inconnu ou un mot de passe faux : on ne révèle pas quels comptes existent.
-      setError('Adresse e-mail ou mot de passe incorrect.');
+    } catch (loginError) {
+      // Le serveur donne le même message pour un compte inconnu ou un mot de passe faux.
+      setError(errorMessage(loginError, 'Adresse e-mail ou mot de passe incorrect.'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -87,7 +92,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <Button
         type="submit"
         variant="primary"
-        loading={isLoading}
+        loading={submitting}
         className="w-full"
         icon={<LogIn size={16} />}
       >

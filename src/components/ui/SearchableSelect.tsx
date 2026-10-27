@@ -25,6 +25,11 @@ interface SearchableSelectProps<T extends string> {
   error?: string;
   disabled?: boolean;
   'aria-label'?: string;
+  /**
+   * Texte saisi dans la recherche, pour une liste chargée depuis le serveur page par page :
+   * le parent relit les options correspondantes.
+   */
+  onSearchChange?: (query: string) => void;
 }
 
 export function SearchableSelect<T extends string>({
@@ -40,6 +45,7 @@ export function SearchableSelect<T extends string>({
   error,
   disabled = false,
   'aria-label': ariaLabel,
+  onSearchChange,
 }: SearchableSelectProps<T>) {
   const {
     triggerId,
@@ -120,6 +126,7 @@ export function SearchableSelect<T extends string>({
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActiveIndex(0);
+                onSearchChange?.(event.target.value);
               }}
               onKeyDown={handleListKeyDown}
               placeholder={searchPlaceholder}

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { errorMessage } from '@/lib/errorMessage';
 import type { Client, ClientUpdateInput } from '@/types';
 import { CLIENT_ERRORS, isValidEmail, isValidPhone, validateClientInput } from '@/utils/validators';
 
@@ -13,7 +14,7 @@ interface EditClientModalProps {
   onSave: (id: string, changes: ClientUpdateInput) => Promise<void>;
 }
 
-type FieldErrors = Partial<Record<keyof ClientUpdateInput, string>>;
+type FieldErrors = Partial<Record<keyof ClientUpdateInput | 'form', string>>;
 
 export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientModalProps) {
   const [values, setValues] = useState<ClientUpdateInput>({
@@ -41,6 +42,8 @@ export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientM
     try {
       await onSave(client.id, { ...values, name: values.name.trim(), phone: values.phone.trim() });
       onClose();
+    } catch (error) {
+      setErrors({ form: errorMessage(error, 'La fiche n’a pas pu être enregistrée. Réessayez.') });
     } finally {
       setSaving(false);
     }
@@ -55,6 +58,14 @@ export function EditClientModal({ client, isOpen, onClose, onSave }: EditClientM
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {errors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {errors.form}
+          </p>
+        )}
         <Input
           id="client-name"
           label="Nom ou raison sociale"

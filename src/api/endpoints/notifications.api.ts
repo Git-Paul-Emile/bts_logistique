@@ -1,80 +1,56 @@
-import type { AppNotification, NewNotification } from '@/types';
-import { reportError } from '@/lib/reportError';
+// Notifications du personnel : appels à /notifications. Elles sont créées par le serveur
+// (colis, paiements, e-mails) ; le front ne fait que les lire et les marquer.
+import { getData, getPage, http, type Page } from '@/api/client';
+import type { AppNotification, NotificationCategory, NotificationDelivery } from '@/types';
 
-const NOTIFICATIONS_STORAGE_KEY = 'bts_notifications_v2';
-
-// Notifications de démonstration, cohérentes avec les colis et paiements de démonstration.
-const initialNotifications: AppNotification[] = [
-  {
-    id: 'ntf-seed-3',
-    category: 'package',
-    title: 'Nouveau colis enregistré',
-    message: 'Quincaillerie du Fleuve (M. Traoré), Guangzhou vers Bamako.',
-    package_id: 'pkg-3',
-    tracking_number: 'BTS-ML-2026-0015',
-    read: false,
-    created_at: '2026-10-18T09:10:00Z',
-  },
-  {
-    id: 'ntf-seed-2',
-    category: 'payment',
-    title: 'Paiement reçu',
-    message: 'Boutique Touba Textile (Mme Diop) a réglé 154 980 F CFA.',
-    package_id: 'pkg-2',
-    tracking_number: 'BTS-SN-2026-0042',
-    read: false,
-    created_at: '2026-10-17T11:30:00Z',
-  },
-  {
-    id: 'ntf-seed-1',
-    category: 'package',
-    title: 'Colis arrivé à destination',
-    message: 'Arrivé à l’entrepôt BTS de Dakar.',
-    package_id: 'pkg-2',
-    tracking_number: 'BTS-SN-2026-0042',
-    read: true,
-    created_at: '2026-10-17T11:20:00Z',
-  },
-];
-
-function loadStoredNotifications(): AppNotification[] {
-  try {
-    const raw = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AppNotification[]) : initialNotifications;
-  } catch (error) {
-    reportError('notifications.api : loadStoredNotifications', error);
-    return initialNotifications;
-  }
+interface NotificationDto {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  message: string;
+  package: { id: string; tracking_number: string } | null;
+  delivery: NotificationDelivery | null;
+  read: boolean;
+  created_at: string;
 }
 
-function saveNotifications(notifications: AppNotification[]): void {
-  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+function toNotification(dto: NotificationDto): AppNotification {
+  return {
+    id: dto.id,
+    category: dto.category,
+    title: dto.title,
+    message: dto.message,
+    package_id: dto.package?.id,
+    tracking_number: dto.package?.tracking_number,
+    delivery: dto.delivery ?? undefined,
+    read: dto.read,
+    created_at: dto.created_at,
+  };
 }
 
-// Simulation en attendant le back. Côté serveur, les notifications seront créées par les
-// services métier (colis, paiements, envoi d'e-mails) et l'état lu / non lu sera propre à chaque utilisateur.
+export interface NotificationListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: NotificationCategory;
+  read?: boolean;
+}
+
 export const notificationsApi = {
-  async getNotifications(): Promise<AppNotification[]> {
-    return loadStoredNotifications();
+  async list(params: NotificationListParams): Promise<Page<AppNotification>> {
+    const page = await getPage<NotificationDto>(http.get('/notifications', { params }));
+    return { items: page.items.map(toNotification), meta: page.meta };
   },
 
-  async createNotification(input: NewNotification): Promise<AppNotification> {
-    const created: AppNotification = {
-      ...input,
-      id: `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      read: false,
-      created_at: new Date().toISOString(),
-    };
-    saveNotifications([created, ...loadStoredNotifications()]);
-    return created;
+  async unreadCount(): Promise<number> {
+    return (await getData<{ count: number }>(http.get('/notifications/unread-count'))).count;
   },
 
   async setRead(ids: string[], read: boolean): Promise<void> {
-    const targets = new Set(ids);
-    saveNotifications(
-      loadStoredNotifications().map((notification) =>
-        targets.has(notification.id) ? { ...notification, read } : notification
-      )
-    );
+    await http.patch('/notifications/read', { ids, read });
+  },
+
+  async markAllRead(): Promise<void> {
+    await http.post('/notifications/read-all');
   },
 };

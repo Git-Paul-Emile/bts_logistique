@@ -90,4 +90,9 @@ export interface ImportPlan<Item, Patch> {
 export interface ImportBatch<Item, Patch> {
   creates: Item[];
   completions: { targetId: string; changes: Patch }[];
+  /**
+   * À appeler après l'enregistrement de chaque élément créé : son empreinte est gardée par le
+   * serveur, et un import interrompu puis relancé ne le recrée pas.
+   */
+  markImported: (item: Item) => Promise<void>;
 }

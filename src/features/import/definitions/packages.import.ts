@@ -1,21 +1,40 @@
-import type { Client, Package, PricingGrid } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS, TRANSPORT_MODE_LABELS } from '@/types';
+import type { PublicPricing } from '@/api/endpoints/pricing.api';
+import type { Client, NetworkLocation, Package, TransportMode } from '@/types';
+import { TRANSPORT_MODE_LABELS } from '@/types';
 import { formatPrice } from '@/utils/formatters';
-import { computeCubicMeter, computePaymentStatus, computePrice } from '@/utils/packagePricing';
+import { computeCubicMeter, computePrice } from '@/utils/packagePricing';
 import { normalizeText } from '@/utils/search';
 import { choiceList, issue, readChoice, readNumber, readText } from '../cells';
 import { completeEmptyFields } from '../completeFields';
 import type { FieldIssue, ImportDefinition } from '../importTypes';
-import { matchPlace } from './shipments.import';
+import { EXAMPLE_DESTINATION, EXAMPLE_ORIGIN, matchPlace, placeChoices } from './shipments.import';
 
-/** Colis à créer. Un numéro de suivi vide est attribué au moment de l'import. */
-export type PackageImportItem = Omit<Package, 'id' | 'created_at' | 'updated_at' | 'events'>;
+/**
+ * Ligne de colis. Un numéro de suivi renseigné désigne un colis déjà enregistré, à compléter ;
+ * une case vide crée un nouveau colis, dont le numéro est attribué par le serveur.
+ */
+export interface PackageImportItem {
+  tracking_number: string;
+  client_id: string;
+  origin_code: string;
+  destination_code: string;
+  description?: string;
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  weight_kg: number;
+  transport_mode: TransportMode;
+  /** Montant déjà versé, enregistré comme paiement à la création. */
+  amount_paid: number;
+}
 export type PackageImportPatch = Partial<Pick<Package, 'description'>>;
 
 export interface PackageImportContext {
   clients: readonly Client[];
-  rates: PricingGrid['rates'];
+  rates: PublicPricing['rates'];
   packagesByTracking: ReadonlyMap<string, Package>;
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
 }
 
 const COLUMNS = {
@@ -37,13 +56,11 @@ const DIMENSIONS = ['length_cm', 'width_cm', 'height_cm', 'weight_kg'] as const;
 const digits = (value: string) => value.replace(/\D/g, '');
 
 export function packageImportContext(
-  clients: readonly Client[],
-  rates: PricingGrid['rates'],
-  packages: readonly Package[]
+  data: Omit<PackageImportContext, 'packagesByTracking'> & { packages: readonly Package[] }
 ): PackageImportContext {
+  const { packages, ...rest } = data;
   return {
-    clients,
-    rates,
+    ...rest,
     packagesByTracking: new Map(packages.map((pkg) => [normalizeText(pkg.tracking_number), pkg])),
   };
 }
@@ -69,10 +86,10 @@ export const packagesImport: ImportDefinition<
   singular: 'colis',
   plural: 'colis',
   columns: [
-    { header: COLUMNS.tracking, required: false, example: 'BTS-CI-2026-0089 (vide : attribué)' },
+    { header: COLUMNS.tracking, required: false, example: 'Vide pour un nouveau colis' },
     { header: COLUMNS.client, required: true, example: '+225 07 48 92 10 33' },
-    { header: COLUMNS.origin, required: true, example: BTS_ORIGINS[0] },
-    { header: COLUMNS.destination, required: true, example: BTS_DESTINATIONS[0] },
+    { header: COLUMNS.origin, required: true, example: EXAMPLE_ORIGIN },
+    { header: COLUMNS.destination, required: true, example: EXAMPLE_DESTINATION },
     { header: COLUMNS.description, required: false, example: 'Pièces détachées' },
     { header: COLUMNS.length_cm, required: true, example: 80 },
     { header: COLUMNS.width_cm, required: true, example: 60 },
@@ -85,6 +102,14 @@ export const packagesImport: ImportDefinition<
     const errors: FieldIssue[] = [];
 
     const trackingNumber = readText(cells, COLUMNS.tracking);
+    if (trackingNumber && !context.packagesByTracking.has(normalizeText(trackingNumber))) {
+      errors.push(
+        issue(
+          COLUMNS.tracking,
+          'Aucun colis ne porte ce numéro. Laissez la case vide : le numéro est attribué à l’enregistrement.'
+        )
+      );
+    }
 
     const clientValue = readText(cells, COLUMNS.client);
     const client = clientValue ? findClient(clientValue, context.clients) : undefined;
@@ -103,12 +128,11 @@ export const packagesImport: ImportDefinition<
       );
     }
 
-    const origin = matchPlace(readText(cells, COLUMNS.origin), BTS_ORIGINS);
-    if (!origin)
-      errors.push(issue(COLUMNS.origin, `Choisissez parmi : ${BTS_ORIGINS.join(', ')}.`));
-    const destination = matchPlace(readText(cells, COLUMNS.destination), BTS_DESTINATIONS);
+    const origin = matchPlace(readText(cells, COLUMNS.origin), context.origins);
+    if (!origin) errors.push(issue(COLUMNS.origin, placeChoices(context.origins)));
+    const destination = matchPlace(readText(cells, COLUMNS.destination), context.destinations);
     if (!destination) {
-      errors.push(issue(COLUMNS.destination, `Choisissez parmi : ${BTS_DESTINATIONS.join(', ')}.`));
+      errors.push(issue(COLUMNS.destination, placeChoices(context.destinations)));
     }
 
     const sizes: Record<(typeof DIMENSIONS)[number], number> = {
@@ -132,8 +156,10 @@ export const packagesImport: ImportDefinition<
     if (!mode) errors.push(issue(COLUMNS.mode, `Indiquez ${choiceList(TRANSPORT_MODE_LABELS)}.`));
 
     const paidValue = readNumber(cells, COLUMNS.paid);
-    if (paidValue !== null && (Number.isNaN(paidValue) || paidValue < 0)) {
-      errors.push(issue(COLUMNS.paid, 'Saisissez un montant en F CFA, ou 0 si rien n’a été payé.'));
+    if (paidValue !== null && (!Number.isInteger(paidValue) || paidValue < 0)) {
+      errors.push(
+        issue(COLUMNS.paid, 'Saisissez un montant entier en F CFA, ou 0 si rien n’a été payé.')
+      );
     }
 
     if (
@@ -147,9 +173,8 @@ export const packagesImport: ImportDefinition<
       return { errors };
     }
 
-    const rate = context.rates[mode];
     const cubicMeter = computeCubicMeter(sizes.length_cm, sizes.width_cm, sizes.height_cm);
-    const finalPrice = computePrice(cubicMeter, rate.client_rate_per_cbm);
+    const finalPrice = computePrice(cubicMeter, context.rates[mode].client_rate_per_cbm);
     const amountPaid = paidValue ?? 0;
     if (amountPaid > finalPrice) {
       return {
@@ -166,18 +191,11 @@ export const packagesImport: ImportDefinition<
       item: {
         tracking_number: trackingNumber,
         client_id: client.id,
-        client_name: client.name,
         description: readText(cells, COLUMNS.description) || undefined,
-        origin,
-        destination,
+        origin_code: origin.code,
+        destination_code: destination.code,
         ...sizes,
-        cubic_meter: cubicMeter,
-        coefficient: rate.client_rate_per_cbm,
-        final_price: finalPrice,
         transport_mode: mode,
-        collector_margin: Math.round(cubicMeter * rate.collector_margin_per_cbm),
-        status: 'registered',
-        payment_status: computePaymentStatus(amountPaid, finalPrice),
         amount_paid: amountPaid,
       },
     };
@@ -201,8 +219,8 @@ export const packagesImport: ImportDefinition<
       ? `n:${normalizeText(item.tracking_number)}`
       : [
           item.client_id,
-          item.origin,
-          item.destination,
+          item.origin_code,
+          item.destination_code,
           item.description ?? '',
           item.length_cm,
           item.width_cm,

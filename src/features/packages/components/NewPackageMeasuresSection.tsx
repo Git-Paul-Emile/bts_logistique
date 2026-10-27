@@ -95,18 +95,24 @@ export function NewPackageMeasuresSection({ form }: { form: NewPackageForm }) {
           value={form.weightKg}
           onChange={form.setWeightKg}
         />
-        <div>
-          <FieldLabel htmlFor="package-custom-coeff">Coefficient appliqué (F CFA / m³)</FieldLabel>
-          <Input
-            id="package-custom-coeff"
-            type="number"
-            min={MIN_COEFFICIENT}
-            step={1}
-            value={form.customCoeff}
-            onChange={(e) => form.setCustomCoeff(Math.max(MIN_COEFFICIENT, Number(e.target.value)))}
-            required
-          />
-        </div>
+        {form.canOverrideRate && (
+          <div>
+            <FieldLabel htmlFor="package-custom-coeff">
+              Coefficient appliqué (F CFA / m³)
+            </FieldLabel>
+            <Input
+              id="package-custom-coeff"
+              type="number"
+              min={MIN_COEFFICIENT}
+              step={1}
+              value={form.ratePerCbm}
+              onChange={(e) =>
+                form.setCustomCoeff(Math.max(MIN_COEFFICIENT, Math.round(Number(e.target.value))))
+              }
+              required
+            />
+          </div>
+        )}
       </div>
     </div>
   );

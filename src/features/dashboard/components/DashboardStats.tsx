@@ -1,46 +1,55 @@
-import { DollarSign, Package, Scale } from 'lucide-react';
+import { DollarSign, Package, Scale, Wallet } from 'lucide-react';
+import type { DashboardSummary } from '@/api/endpoints/dashboard.api';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatPrice } from '@/utils/formatters';
 
 interface DashboardStatsProps {
-  totalQuotes: number;
-  totalVolume: number;
-  totalRevenue: number;
-  coefficient: number;
+  summary: DashboardSummary;
+  /** Tarif maritime public ; absent tant qu'il n'est pas chargé. */
+  seaRatePerCbm: number | undefined;
 }
 
-export function DashboardStats({
-  totalQuotes,
-  totalVolume,
-  totalRevenue,
-  coefficient,
-}: DashboardStatsProps) {
+/**
+ * Les quatre indicateurs du mois, calculés par le serveur. L'équipe voit le chiffre d'affaires ;
+ * un collecteur voit sa propre marge.
+ */
+export function DashboardStats({ summary, seaRatePerCbm }: DashboardStatsProps) {
+  const activity = summary.month_activity;
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
-        label="EXPÉDITIONS ENREGISTRÉES"
-        value={totalQuotes.toString()}
-        detail="Calculs archivés"
+        label="COLIS DU MOIS"
+        value={activity.packages.toString()}
+        detail="Colis enregistrés, hors annulés"
         icon={Package}
       />
       <StatCard
-        label="VOLUME GLOBAL TRAITÉ"
-        value={`${totalVolume.toFixed(2)} m³`}
+        label="VOLUME DU MOIS"
+        value={`${activity.volume_cbm.toFixed(2)} m³`}
         detail="Mètres cubes cumulés"
         icon={Scale}
       />
       <StatCard
-        label="TARIF EN COURS"
-        value={`${coefficient.toFixed(2)} F CFA`}
+        label="TARIF MARITIME EN COURS"
+        value={seaRatePerCbm === undefined ? '...' : formatPrice(seaRatePerCbm)}
         detail="Par mètre cube (CBM)"
         icon={DollarSign}
       />
-      <StatCard
-        label="MONTANT ESTIMÉ CUMULÉ"
-        value={formatPrice(totalRevenue)}
-        detail="Total cotations"
-        icon={DollarSign}
-      />
+      {summary.finance ? (
+        <StatCard
+          label="CHIFFRE D’AFFAIRES DU MOIS"
+          value={formatPrice(summary.finance.revenue)}
+          detail={`Dont ${formatPrice(activity.collector_margin)} de marges collecteurs`}
+          icon={DollarSign}
+        />
+      ) : (
+        <StatCard
+          label="MA MARGE DU MOIS"
+          value={formatPrice(activity.collector_margin)}
+          detail="Sur les colis que j’ai enregistrés"
+          icon={Wallet}
+        />
+      )}
     </div>
   );
 }

@@ -1,15 +1,19 @@
-import { BellOff, Mail, MailOpen, Search } from 'lucide-react';
+import { BellOff, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/common/Loader';
-import { NotificationItemContent } from '@/features/notifications/components/NotificationItemContent';
-import { useNotifications } from '@/features/notifications/hooks/useNotifications';
+import { NotificationRow } from '@/features/notifications/components/NotificationRow';
+import {
+  useNotificationActions,
+  useUnreadCount,
+} from '@/features/notifications/hooks/useNotifications';
 import type {
   CategoryFilter,
   ReadFilter,
 } from '@/features/notifications/hooks/useNotificationFilters';
 import { useNotificationFilters } from '@/features/notifications/hooks/useNotificationFilters';
 import type { AppNotification, NotificationCategory } from '@/types';
-import { NOTIFICATION_CATEGORY_LABELS, NOTIFICATION_DELIVERY_LABELS } from '@/types';
+import { NOTIFICATION_CATEGORY_LABELS } from '@/types';
+import { Pagination } from '@/components/ui/Pagination';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import type { SelectOption } from '@/components/ui/SearchableSelect';
 
@@ -32,8 +36,11 @@ const CATEGORY_OPTIONS: SelectOption<CategoryFilter>[] = [
 ];
 
 export function NotificationsPage({ onOpenPackage }: NotificationsPageProps) {
-  const { notifications, loading, unreadCount, setRead, markAllAsRead } = useNotifications();
-  const filters = useNotificationFilters(notifications);
+  const unreadCount = useUnreadCount().data ?? 0;
+  const { setRead, markAllAsRead } = useNotificationActions();
+  const filters = useNotificationFilters();
+  const loading = filters.list.isPending;
+  const visible = filters.list.data?.items ?? [];
 
   const openNotification = (notification: AppNotification) => {
     if (!notification.read) void setRead([notification.id], true);
@@ -114,7 +121,7 @@ export function NotificationsPage({ onOpenPackage }: NotificationsPageProps) {
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {tab.label} ({filters.counts[tab.value]})
+              {tab.value === 'unread' ? `${tab.label} (${unreadCount})` : tab.label}
             </button>
           ))}
         </div>
@@ -122,7 +129,17 @@ export function NotificationsPage({ onOpenPackage }: NotificationsPageProps) {
 
       {loading && <Loader label="Chargement des notifications..." />}
 
-      {!loading && filters.visible.length === 0 && (
+      {filters.list.isError && (
+        <p
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+        >
+          Les notifications n’ont pas pu être chargées. Vérifiez votre connexion puis rechargez la
+          page.
+        </p>
+      )}
+
+      {!loading && !filters.list.isError && visible.length === 0 && (
         <div className="flex flex-col items-center rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
           <BellOff size={28} aria-hidden="true" className="text-slate-400" />
           <p className="mt-3 font-semibold text-slate-700">
@@ -138,48 +155,27 @@ export function NotificationsPage({ onOpenPackage }: NotificationsPageProps) {
         </div>
       )}
 
-      {!loading && filters.visible.length > 0 && (
+      {!loading && visible.length > 0 && (
         <ul
           className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white"
           aria-live="polite"
         >
-          {filters.visible.map((notification) => (
-            <li
+          {visible.map((notification) => (
+            <NotificationRow
               key={notification.id}
-              className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-start ${notification.read ? '' : 'bg-[#003366]/3'}`}
-            >
-              <button
-                type="button"
-                onClick={() => openNotification(notification)}
-                disabled={!notification.package_id}
-                className="flex min-w-0 flex-1 text-left disabled:cursor-default"
-                aria-label={
-                  notification.package_id
-                    ? `${notification.title}, ouvrir le colis ${notification.tracking_number}`
-                    : undefined
-                }
-              >
-                <NotificationItemContent notification={notification} />
-              </button>
-              <div className="flex shrink-0 items-center gap-3">
-                {notification.delivery && (
-                  <span className="text-xs font-semibold text-slate-500">
-                    {NOTIFICATION_DELIVERY_LABELS[notification.delivery]}
-                  </span>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={notification.read ? <Mail size={14} /> : <MailOpen size={14} />}
-                  onClick={() => void setRead([notification.id], !notification.read)}
-                >
-                  {notification.read ? 'Marquer non lue' : 'Marquer lue'}
-                </Button>
-              </div>
-            </li>
+              notification={notification}
+              onOpen={() => openNotification(notification)}
+              onToggleRead={() => void setRead([notification.id], !notification.read)}
+            />
           ))}
         </ul>
       )}
+
+      <Pagination
+        meta={filters.list.data?.meta}
+        onPageChange={filters.setPage}
+        itemLabel="notifications"
+      />
     </div>
   );
 }

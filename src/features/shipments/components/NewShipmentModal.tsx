@@ -4,10 +4,9 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import type { SelectOption } from '@/components/ui/SearchableSelect';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
-import type { Shipment } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS } from '@/types';
-import { toOptions } from '@/utils/selectOptions';
-import type { NewShipmentData } from '../hooks/useNewShipmentForm';
+import type { NewShipmentInput } from '@/api/endpoints/shipments.api';
+import { locationOptions } from '@/features/locations/useLocations';
+import type { NetworkLocation, Shipment } from '@/types';
 import { DEFAULT_CAPACITY_CBM, useNewShipmentForm } from '../hooks/useNewShipmentForm';
 
 const FREIGHT_TYPE_OPTIONS: SelectOption<Shipment['type']>[] = [
@@ -18,12 +17,20 @@ const FREIGHT_TYPE_OPTIONS: SelectOption<Shipment['type']>[] = [
 interface NewShipmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: NewShipmentData) => Promise<Shipment>;
+  onCreate: (input: NewShipmentInput) => Promise<unknown>;
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
 }
 
 /** Fenêtre « Nouveau conteneur / lot ». La saisie est conservée si la fenêtre est fermée. */
-export function NewShipmentModal({ isOpen, onClose, onCreate }: NewShipmentModalProps) {
-  const form = useNewShipmentForm(onCreate, onClose);
+export function NewShipmentModal({
+  isOpen,
+  onClose,
+  onCreate,
+  origins,
+  destinations,
+}: NewShipmentModalProps) {
+  const form = useNewShipmentForm({ origins, destinations, onCreate, onClose });
 
   return (
     <Modal
@@ -33,6 +40,14 @@ export function NewShipmentModal({ isOpen, onClose, onCreate }: NewShipmentModal
       maxWidth="xl"
     >
       <form onSubmit={form.handleCreate} noValidate className="space-y-4">
+        {form.errors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {form.errors.form}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <FieldLabel htmlFor="shipment-type">Type de fret *</FieldLabel>
@@ -68,7 +83,7 @@ export function NewShipmentModal({ isOpen, onClose, onCreate }: NewShipmentModal
               id="shipment-origin"
               value={form.origin}
               onChange={form.setOrigin}
-              options={toOptions(BTS_ORIGINS)}
+              options={locationOptions(origins)}
             />
           </div>
           <div>
@@ -77,7 +92,7 @@ export function NewShipmentModal({ isOpen, onClose, onCreate }: NewShipmentModal
               id="shipment-destination"
               value={form.destination}
               onChange={form.setDestination}
-              options={toOptions(BTS_DESTINATIONS)}
+              options={locationOptions(destinations)}
             />
           </div>
         </div>

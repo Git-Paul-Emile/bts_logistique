@@ -6,6 +6,7 @@ import { choiceList, issue, readChoice, readNumber, readText } from '../cells';
 import type { FieldIssue, ImportDefinition, ImportIssue } from '../importTypes';
 
 export interface PaymentImportItem {
+  clientId: string;
   packageId: string;
   trackingNumber: string;
   amount: number;
@@ -55,9 +56,9 @@ export const paymentsImport: ImportDefinition<PaymentImportItem, PaymentImportCo
     }
 
     const amount = readNumber(cells, COLUMNS.amount);
-    if (amount === null || Number.isNaN(amount) || amount <= 0) {
+    if (amount === null || !Number.isInteger(amount) || amount <= 0) {
       errors.push(
-        issue(COLUMNS.amount, 'Saisissez un montant en F CFA supérieur à 0, sans symbole.')
+        issue(COLUMNS.amount, 'Saisissez un montant entier en F CFA supérieur à 0, sans symbole.')
       );
     }
 
@@ -69,6 +70,7 @@ export const paymentsImport: ImportDefinition<PaymentImportItem, PaymentImportCo
     if (errors.length > 0 || !pkg || !method || amount === null) return { errors };
     return {
       item: {
+        clientId: pkg.client_id,
         packageId: pkg.id,
         trackingNumber: pkg.tracking_number,
         amount,

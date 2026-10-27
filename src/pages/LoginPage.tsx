@@ -1,6 +1,7 @@
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { Loader } from '@/components/common/Loader';
 import { useAuth } from '@/context/useAuth';
 import type { LoginRedirectState } from '@/router/ProtectedRoute';
 import { PATHS } from '@/router/paths';
@@ -10,11 +11,15 @@ function readRedirectState(state: unknown): LoginRedirectState {
 }
 
 export function LoginPage() {
-  const { isAuthenticated, signOutNotice } = useAuth();
+  const { isAuthenticated, isLoading, signOutNotice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { from } = readRedirectState(location.state);
   const destination = from ?? PATHS.admin;
+
+  if (isLoading) {
+    return <Loader fullScreen label="Vérification de la session..." />;
+  }
 
   if (isAuthenticated) {
     return <Navigate to={destination} replace />;

@@ -1,56 +1,54 @@
-import { useMemo, useState } from 'react';
-import type { AppNotification, NotificationCategory } from '@/types';
+import { useState } from 'react';
+import type { NotificationCategory } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useNotificationList } from './useNotifications';
 
 export type ReadFilter = 'all' | 'unread' | 'read';
 export type CategoryFilter = 'all' | NotificationCategory;
 
-function matchesSearch(notification: AppNotification, term: string): boolean {
-  if (!term) return true;
-  const haystack =
-    `${notification.title} ${notification.message} ${notification.tracking_number ?? ''}`.toLowerCase();
-  return haystack.includes(term);
-}
+const PAGE_SIZE = 20;
 
-export function useNotificationFilters(notifications: AppNotification[]) {
+/** Filtres de la page Notifications, appliqués par le serveur. */
+export function useNotificationFilters() {
   const [search, setSearch] = useState('');
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
   const [category, setCategory] = useState<CategoryFilter>('all');
-  const debouncedSearch = useDebounce(search.trim().toLowerCase());
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(search.trim());
 
-  const visible = useMemo(
-    () =>
-      notifications.filter(
-        (notification) =>
-          (readFilter === 'all' ||
-            (readFilter === 'unread' ? !notification.read : notification.read)) &&
-          (category === 'all' || notification.category === category) &&
-          matchesSearch(notification, debouncedSearch)
-      ),
-    [notifications, readFilter, category, debouncedSearch]
-  );
+  const list = useNotificationList({
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    category: category === 'all' ? undefined : category,
+    read: readFilter === 'all' ? undefined : readFilter === 'read',
+  });
 
-  const counts = useMemo(() => {
-    const unread = notifications.filter((notification) => !notification.read).length;
-    return { all: notifications.length, unread, read: notifications.length - unread };
-  }, [notifications]);
+  // Tout changement de filtre ramène à la première page.
+  const withFirstPage =
+    <Value>(setter: (value: Value) => void) =>
+    (value: Value) => {
+      setter(value);
+      setPage(1);
+    };
 
   const hasActiveFilters = Boolean(debouncedSearch) || readFilter !== 'all' || category !== 'all';
   const resetFilters = () => {
     setSearch('');
     setReadFilter('all');
     setCategory('all');
+    setPage(1);
   };
 
   return {
     search,
-    setSearch,
+    setSearch: withFirstPage(setSearch),
     readFilter,
-    setReadFilter,
+    setReadFilter: withFirstPage(setReadFilter),
     category,
-    setCategory,
-    visible,
-    counts,
+    setCategory: withFirstPage(setCategory),
+    setPage,
+    list,
     hasActiveFilters,
     resetFilters,
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeCubicMeter, computePaymentStatus, computePrice } from './packagePricing';
+import { computeCubicMeter, computePrice } from './packagePricing';
 
 describe('computeCubicMeter', () => {
   it('convertit des centimètres en mètres cubes', () => {
@@ -14,13 +14,5 @@ describe('computeCubicMeter', () => {
 describe('computePrice', () => {
   it('arrondit le prix au franc près', () => {
     expect(computePrice(0.2345, 380_000)).toBe(89_110);
-  });
-});
-
-describe('computePaymentStatus', () => {
-  it('indique le statut selon le montant déjà payé', () => {
-    expect(computePaymentStatus(0, 1000)).toBe('unpaid');
-    expect(computePaymentStatus(400, 1000)).toBe('partial');
-    expect(computePaymentStatus(1000, 1000)).toBe('paid');
   });
 });

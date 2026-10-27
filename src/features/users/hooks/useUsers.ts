@@ -1,52 +1,39 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { AppUser, AppUserInput } from '@/types';
-import { usersApi } from '@/api/endpoints/users.api';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usersApi, type UserListParams } from '@/api/endpoints/users.api';
+import { queryKeys } from '@/api/queryKeys';
+import type { AppUserInput } from '@/types';
 
-export function useUsers() {
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useUserList(params: UserListParams) {
+  return useQuery({
+    queryKey: [...queryKeys.users, 'list', params],
+    queryFn: () => usersApi.list(params),
+    placeholderData: keepPreviousData,
+  });
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    usersApi
-      .getUsers()
-      .then((loaded) => {
-        if (!cancelled) setUsers(loaded);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+/** Création (avec e-mail d'invitation), modification, activation et restauration des comptes. */
+export function useUserActions() {
+  const queryClient = useQueryClient();
+  const onSuccess = () => queryClient.invalidateQueries({ queryKey: queryKeys.users });
 
-  const replaceUser = (updated: AppUser) =>
-    setUsers((previous) => previous.map((user) => (user.id === updated.id ? updated : user)));
+  const invite = useMutation({
+    mutationFn: (input: AppUserInput) => usersApi.invite(input),
+    onSuccess,
+  });
+  const update = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AppUserInput }) => usersApi.update(id, input),
+    onSuccess,
+  });
+  const setActive = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => usersApi.setActive(id, active),
+    onSuccess,
+  });
+  const restore = useMutation({ mutationFn: (id: string) => usersApi.restore(id), onSuccess });
 
-  const createUser = useCallback(async (input: AppUserInput) => {
-    const created = await usersApi.createUser(input);
-    setUsers((previous) => [created, ...previous]);
-    return created;
-  }, []);
-
-  const updateUser = useCallback(async (id: string, input: AppUserInput) => {
-    const updated = await usersApi.updateUser(id, input);
-    replaceUser(updated);
-    return updated;
-  }, []);
-
-  const toggleActive = useCallback(async (user: AppUser) => {
-    const updated = await usersApi.setUserActive(user.id, !user.active);
-    replaceUser(updated);
-    return updated;
-  }, []);
-
-  const restoreUser = useCallback(async (user: AppUser) => {
-    const restored = await usersApi.restoreUser(user.id);
-    replaceUser(restored);
-    return restored;
-  }, []);
-
-  return { users, loading, createUser, updateUser, toggleActive, restoreUser };
+  return {
+    inviteUser: invite.mutateAsync,
+    updateUser: (id: string, input: AppUserInput) => update.mutateAsync({ id, input }),
+    setUserActive: (id: string, active: boolean) => setActive.mutateAsync({ id, active }),
+    restoreUser: restore.mutateAsync,
+  };
 }

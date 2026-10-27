@@ -1,16 +1,18 @@
+import type { Agency } from '@/features/locations/useLocations';
 import type { AppUser, AppUserInput } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS, USER_ROLE_LABELS } from '@/types';
+import { USER_ROLE_LABELS } from '@/types';
 import { normalizeText } from '@/utils/search';
 import { isValidEmail, isValidPhone } from '@/utils/validators';
 import { choiceList, issue, readChoice, readText } from '../cells';
 import { completeEmptyFields } from '../completeFields';
 import type { FieldIssue, ImportDefinition } from '../importTypes';
-import { matchPlace } from './shipments.import';
+import { EXAMPLE_DESTINATION, matchPlace, placeChoices } from './shipments.import';
 
 export type UserImportPatch = Partial<Pick<AppUser, 'phone'>>;
 
 export interface UserImportContext {
   usersByEmail: ReadonlyMap<string, AppUser>;
+  agencies: readonly Agency[];
 }
 
 const COLUMNS = {
@@ -21,10 +23,14 @@ const COLUMNS = {
   agency: 'Agence',
 } as const;
 
-const AGENCIES = [...BTS_ORIGINS, ...BTS_DESTINATIONS];
-
-export function userImportContext(users: readonly AppUser[]): UserImportContext {
-  return { usersByEmail: new Map(users.map((user) => [normalizeText(user.email), user])) };
+export function userImportContext(
+  users: readonly AppUser[],
+  agencies: readonly Agency[]
+): UserImportContext {
+  return {
+    usersByEmail: new Map(users.map((user) => [normalizeText(user.email), user])),
+    agencies,
+  };
 }
 
 export const usersImport: ImportDefinition<AppUserInput, UserImportContext, UserImportPatch> = {
@@ -36,9 +42,9 @@ export const usersImport: ImportDefinition<AppUserInput, UserImportContext, User
     { header: COLUMNS.email, required: true, example: 'awa.traore@bts-logistique.fr' },
     { header: COLUMNS.phone, required: false, example: '+223 70 00 00 00' },
     { header: COLUMNS.role, required: true, example: 'Collecteur' },
-    { header: COLUMNS.agency, required: true, example: BTS_DESTINATIONS[0] },
+    { header: COLUMNS.agency, required: true, example: EXAMPLE_DESTINATION },
   ],
-  parseRow(cells) {
+  parseRow(cells, context) {
     const errors: FieldIssue[] = [];
     const name = readText(cells, COLUMNS.name);
     const email = readText(cells, COLUMNS.email);
@@ -59,11 +65,19 @@ export const usersImport: ImportDefinition<AppUserInput, UserImportContext, User
     }
     const role = readChoice(cells, COLUMNS.role, USER_ROLE_LABELS);
     if (!role) errors.push(issue(COLUMNS.role, `Indiquez ${choiceList(USER_ROLE_LABELS)}.`));
-    const agency = matchPlace(readText(cells, COLUMNS.agency), AGENCIES);
-    if (!agency) errors.push(issue(COLUMNS.agency, `Choisissez parmi : ${AGENCIES.join(', ')}.`));
+    const agency = matchPlace(readText(cells, COLUMNS.agency), context.agencies);
+    if (!agency) errors.push(issue(COLUMNS.agency, placeChoices(context.agencies)));
 
     if (errors.length > 0 || !role || !agency) return { errors };
-    return { item: { name, email: email.trim(), phone: phone || undefined, role, agency } };
+    return {
+      item: {
+        name,
+        email: email.trim(),
+        phone: phone || undefined,
+        role,
+        agency_code: agency.code,
+      },
+    };
   },
   uniqueKey: { column: COLUMNS.email, label: 'adresse e-mail', get: (item) => item.email },
   matchExisting(item, context) {

@@ -1,107 +1,96 @@
+// Session et profil de la personne connectée. Les jetons vivent dans des cookies HttpOnly que
+// le front ne lit jamais : il ne garde que le jeton CSRF, en mémoire (api/client.ts).
 import type {
-  LoginCredentials,
-  AuthResponse,
-  ResetPasswordPayload,
   ChangePasswordPayload,
+  LoginCredentials,
+  SessionDto,
+  SessionUserDto,
+  TokenPasswordPayload,
 } from '@/api/types/auth.types';
-import type { AppUser, ProfileUpdateInput, UserSession } from '@/types';
-import { usersApi } from '@/api/endpoints/users.api';
+import { ApiError, getData, http, setCsrfToken } from '@/api/client';
+import type { ProfileUpdateInput, UserSession } from '@/types';
 
-const AUTH_TOKEN_KEY = 'bts_auth_token';
-const MOCK_TOKEN_PREFIX = 'mock-token:';
-const SIMULATED_LATENCY_MS = 300;
-
-export const INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
-
-function simulateLatency(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS));
+export function toUserSession(dto: SessionUserDto): UserSession {
+  return {
+    id: dto.id,
+    name: dto.name,
+    email: dto.email,
+    phone: dto.phone ?? undefined,
+    role: dto.role,
+    agency: dto.agency.name,
+    agency_code: dto.agency.code,
+    initials: dto.initials,
+  };
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+function openSession(session: SessionDto): UserSession {
+  setCsrfToken(session.csrf_token);
+  return toUserSession(session.user);
 }
 
-function toSession({ active, created_at, archived_at, ...account }: AppUser): UserSession {
-  void active;
-  void created_at;
-  void archived_at;
-  return { ...account, initials: getInitials(account.name) };
+export interface ProfileUpdateResult {
+  user: UserSession;
+  /** Nouvelle adresse en attente de confirmation : un lien vient d'y être envoyé. */
+  pendingEmail: string | null;
 }
 
-function getSessionUserId(): string | null {
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  return token?.startsWith(MOCK_TOKEN_PREFIX) ? token.slice(MOCK_TOKEN_PREFIX.length) : null;
-}
-
-// Simulation en attendant le back : les mêmes signatures seront branchées sur l'API réelle.
-// Le mot de passe n'est pas vérifié ici ; le serveur le fera, avec un message identique
-// pour un compte inconnu et un mot de passe faux.
 export const authApi = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    await simulateLatency();
-    const account = await usersApi.findActiveUserByEmail(credentials.email);
-    if (!account) throw new Error(INVALID_CREDENTIALS);
-    return { user: toSession(account), token: `${MOCK_TOKEN_PREFIX}${account.id}` };
+  async login(credentials: LoginCredentials): Promise<UserSession> {
+    return openSession(await getData(http.post('/auth/login', credentials)));
   },
 
+  /** Session en cours après un rechargement ; null si personne n'est connecté. */
   async getCurrentUser(): Promise<UserSession | null> {
-    const userId = getSessionUserId();
-    if (!userId) return null;
-    const account = await usersApi.getUserById(userId);
-    return account?.active && !account.archived_at ? toSession(account) : null;
+    try {
+      return openSession(await getData(http.get('/auth/me')));
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
+    }
   },
 
   async logout(): Promise<void> {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    try {
+      await http.post('/auth/logout');
+    } finally {
+      setCsrfToken(null);
+    }
   },
 
-  async updateProfile(userId: string, changes: ProfileUpdateInput): Promise<UserSession> {
-    await simulateLatency();
-    const account = await usersApi.getUserById(userId);
-    if (!account) throw new Error(INVALID_CREDENTIALS);
-    const updated = await usersApi.updateUser(userId, {
-      name: changes.name,
-      email: changes.email,
-      phone: changes.phone,
-      role: account.role,
-      agency: account.agency,
-    });
-    return toSession(updated);
+  async updateProfile(changes: ProfileUpdateInput): Promise<ProfileUpdateResult> {
+    const body = await getData<{ user: SessionUserDto; pending_email: string | null }>(
+      http.patch('/me', { name: changes.name, email: changes.email, phone: changes.phone ?? '' })
+    );
+    return { user: toUserSession(body.user), pendingEmail: body.pending_email };
   },
 
-  // Le serveur vérifiera le mot de passe avant d'archiver le compte.
-  async deleteOwnAccount(userId: string, password: string): Promise<void> {
-    void password;
-    await simulateLatency();
-    await usersApi.archiveOwnAccount(userId);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-  },
-
-  async canDeleteOwnAccount(user: UserSession): Promise<boolean> {
-    return user.role !== 'admin' || (await usersApi.countOtherActiveAdmins(user.id)) > 0;
+  /** Archive le compte : le serveur vérifie le mot de passe et ferme la session. */
+  async deleteOwnAccount(password: string): Promise<void> {
+    await http.delete('/me', { data: { password } });
+    setCsrfToken(null);
   },
 
   async changePassword(payload: ChangePasswordPayload): Promise<void> {
-    void payload;
-    await simulateLatency();
+    await http.post('/me/password', {
+      current_password: payload.currentPassword,
+      new_password: payload.newPassword,
+    });
   },
 
-  // Le serveur répond toujours de la même façon, que l'adresse existe ou non,
-  // pour ne pas révéler quels comptes existent.
+  /** Le serveur répond de la même façon que l'adresse existe ou non. */
   async requestPasswordReset(email: string): Promise<void> {
-    void email;
-    await simulateLatency();
+    await http.post('/auth/password/forgot', { email });
   },
 
-  async resetPassword(payload: ResetPasswordPayload): Promise<void> {
-    void payload;
-    await simulateLatency();
+  async resetPassword(payload: TokenPasswordPayload): Promise<void> {
+    await http.post('/auth/password/reset', payload);
+  },
+
+  async acceptInvitation(payload: TokenPasswordPayload): Promise<void> {
+    await http.post('/auth/invitation/accept', payload);
+  },
+
+  async confirmEmail(token: string): Promise<void> {
+    await http.post('/auth/email/confirm', { token });
   },
 };
-
-export { AUTH_TOKEN_KEY };

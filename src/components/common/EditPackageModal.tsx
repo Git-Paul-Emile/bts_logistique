@@ -3,71 +3,72 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import type { Package, PackageUpdateInput } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS } from '@/types';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { useAuth } from '@/context/useAuth';
+import { canOverrideRate } from '@/features/auth/permissions';
+import { useNotify } from '@/features/backoffice/NotifyContext';
+import { locationOptions, useLocations } from '@/features/locations/useLocations';
+import { useUpdatePackage } from '@/features/packages/hooks/usePackages';
+import { errorMessage } from '@/lib/errorMessage';
+import type { Package } from '@/types';
+import type { NumericField } from '@/features/packages/editPackageValues';
+import {
+  changedFields,
+  MEASURE_FIELDS,
+  RATE_FIELD,
+  toValues,
+} from '@/features/packages/editPackageValues';
 import { formatPrice, formatVolume } from '@/utils/formatters';
 import { computeCubicMeter, computePrice } from '@/utils/packagePricing';
-import { SearchableSelect } from '@/components/ui/SearchableSelect';
-import { toOptions } from '@/utils/selectOptions';
 
 interface EditPackageModalProps {
   pkg: Package;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, changes: PackageUpdateInput) => Promise<void>;
 }
 
-type NumericField = 'length_cm' | 'width_cm' | 'height_cm' | 'weight_kg' | 'coefficient';
-
-const NUMERIC_FIELDS: { key: NumericField; label: string; unit: string }[] = [
-  { key: 'length_cm', label: 'Longueur', unit: 'cm' },
-  { key: 'width_cm', label: 'Largeur', unit: 'cm' },
-  { key: 'height_cm', label: 'Hauteur', unit: 'cm' },
-  { key: 'weight_kg', label: 'Poids', unit: 'kg' },
-  { key: 'coefficient', label: 'Tarif au m³', unit: 'F CFA' },
-];
-
-function toInput(pkg: Package): PackageUpdateInput {
-  return {
-    description: pkg.description ?? '',
-    origin: pkg.origin,
-    destination: pkg.destination,
-    length_cm: pkg.length_cm,
-    width_cm: pkg.width_cm,
-    height_cm: pkg.height_cm,
-    weight_kg: pkg.weight_kg,
-    coefficient: pkg.coefficient,
-  };
-}
-
-// Garde les valeurs actuelles dans les listes, même si elles ne font plus partie des choix proposés.
-function withCurrent(options: readonly string[], current: string): string[] {
-  return options.includes(current) ? [...options] : [current, ...options];
-}
-
-export function EditPackageModal({ pkg, isOpen, onClose, onSave }: EditPackageModalProps) {
-  const [values, setValues] = useState<PackageUpdateInput>(() => toInput(pkg));
-  const [errors, setErrors] = useState<Partial<Record<NumericField, string>>>({});
+/** Modification d'un colis. Le serveur recalcule volume, prix et marge. */
+export function EditPackageModal({ pkg, isOpen, onClose }: EditPackageModalProps) {
+  const { user } = useAuth();
+  const { origins, destinations } = useLocations();
+  const updatePackage = useUpdatePackage();
+  const notify = useNotify();
+  const [initial] = useState(() => toValues(pkg));
+  const [values, setValues] = useState(initial);
+  const [errors, setErrors] = useState<Partial<Record<NumericField | 'form', string>>>({});
   const [saving, setSaving] = useState(false);
+  const fields =
+    user && canOverrideRate(user.role) ? [...MEASURE_FIELDS, RATE_FIELD] : MEASURE_FIELDS;
 
   const cubicMeter = computeCubicMeter(values.length_cm, values.width_cm, values.height_cm);
-  const newPrice = computePrice(cubicMeter, values.coefficient);
+  const newPrice = computePrice(cubicMeter, values.rate_per_cbm);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: Partial<Record<NumericField, string>> = {};
-    for (const field of NUMERIC_FIELDS) {
+    for (const field of fields) {
       if (!(values[field.key] > 0))
         nextErrors[field.key] = `${field.label} : saisissez une valeur supérieure à 0.`;
+    }
+    if (!Number.isInteger(values.rate_per_cbm)) {
+      nextErrors.rate_per_cbm = 'Le tarif au m³ est un montant entier en F CFA.';
     }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
+    const changes = changedFields(initial, values);
+    if (Object.keys(changes).length === 0) {
+      onClose();
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(pkg.id, values);
+      const updated = await updatePackage.mutateAsync({ id: pkg.id, changes });
+      notify(`Colis ${updated.tracking_number} modifié.`);
       onClose();
+    } catch (error) {
+      setErrors({ form: errorMessage(error, 'Le colis n’a pas pu être modifié. Réessayez.') });
     } finally {
       setSaving(false);
     }
@@ -81,6 +82,14 @@ export function EditPackageModal({ pkg, isOpen, onClose, onSave }: EditPackageMo
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        {errors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {errors.form}
+          </p>
+        )}
         <Input
           id="edit-description"
           label="Description du contenu"
@@ -100,9 +109,9 @@ export function EditPackageModal({ pkg, isOpen, onClose, onSave }: EditPackageMo
             </label>
             <SearchableSelect
               id="edit-origin"
-              value={values.origin}
-              onChange={(origin) => setValues((previous) => ({ ...previous, origin }))}
-              options={toOptions(withCurrent(BTS_ORIGINS, pkg.origin))}
+              value={values.origin_code}
+              onChange={(code) => setValues((previous) => ({ ...previous, origin_code: code }))}
+              options={locationOptions(origins)}
             />
           </div>
           <div>
@@ -114,15 +123,17 @@ export function EditPackageModal({ pkg, isOpen, onClose, onSave }: EditPackageMo
             </label>
             <SearchableSelect
               id="edit-destination"
-              value={values.destination}
-              onChange={(destination) => setValues((previous) => ({ ...previous, destination }))}
-              options={toOptions(withCurrent(BTS_DESTINATIONS, pkg.destination))}
+              value={values.destination_code}
+              onChange={(code) =>
+                setValues((previous) => ({ ...previous, destination_code: code }))
+              }
+              options={locationOptions(destinations)}
             />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          {NUMERIC_FIELDS.map((field) => (
+          {fields.map((field) => (
             <Input
               key={field.key}
               id={`edit-${field.key}`}
@@ -150,13 +161,13 @@ export function EditPackageModal({ pkg, isOpen, onClose, onSave }: EditPackageMo
             <dd className="font-bold text-slate-800">{formatPrice(pkg.final_price)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Nouveau prix</dt>
+            <dt className="text-xs text-slate-500">Nouveau prix estimé</dt>
             <dd className="font-bold text-[#003366]">{formatPrice(newPrice)}</dd>
           </div>
         </dl>
         <p className="text-xs text-slate-500">
-          Le statut de paiement est recalculé à partir du montant déjà réglé (
-          {formatPrice(pkg.amount_paid)}).
+          Le prix définitif est calculé par le serveur. Le statut de paiement est recalculé à partir
+          du montant déjà réglé ({formatPrice(pkg.amount_paid)}).
         </p>
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">

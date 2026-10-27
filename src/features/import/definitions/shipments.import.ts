@@ -1,19 +1,26 @@
-import type { Shipment } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS, TRANSPORT_MODE_LABELS } from '@/types';
+import type { NewShipmentInput } from '@/api/endpoints/shipments.api';
+import type { NetworkLocation, Shipment } from '@/types';
+import { TRANSPORT_MODE_LABELS } from '@/types';
 import { normalizeText } from '@/utils/search';
 import { validateShipmentInput } from '@/utils/validators';
 import { choiceList, issue, readChoice, readDate, readNumber, readText } from '../cells';
 import { completeEmptyFields } from '../completeFields';
 import type { FieldIssue, ImportDefinition } from '../importTypes';
 
-export type ShipmentImportItem = Omit<Shipment, 'id' | 'created_at'>;
+export type ShipmentImportItem = NewShipmentInput;
 export type ShipmentImportPatch = Partial<
   Pick<Shipment, 'departure_date' | 'estimated_arrival' | 'notes'>
 >;
 
 export interface ShipmentImportContext {
   shipmentsByNumber: ReadonlyMap<string, Shipment>;
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
 }
+
+/** Exemples de villes du réseau, affichés dans l'aide des colonnes. */
+export const EXAMPLE_ORIGIN = 'Guangzhou (Chine)';
+export const EXAMPLE_DESTINATION = 'Abidjan (Côte d’Ivoire)';
 
 const COLUMNS = {
   container_number: 'N° conteneur ou vol',
@@ -27,18 +34,37 @@ const COLUMNS = {
   notes: 'Notes',
 } as const;
 
-export function shipmentImportContext(shipments: readonly Shipment[]): ShipmentImportContext {
+export function shipmentImportContext(
+  shipments: readonly Shipment[],
+  origins: readonly NetworkLocation[],
+  destinations: readonly NetworkLocation[]
+): ShipmentImportContext {
   return {
     shipmentsByNumber: new Map(
       shipments.map((shipment) => [normalizeText(shipment.container_number), shipment])
     ),
+    origins,
+    destinations,
   };
 }
 
-/** Trouve la ville dans une liste fermée, sans tenir compte des majuscules ni des accents. */
-export function matchPlace(value: string, places: readonly string[]): string | undefined {
-  const key = normalizeText(value);
-  return places.find((place) => normalizeText(place) === key);
+/**
+ * Trouve la ville du réseau par son nom ou son code, sans tenir compte des majuscules ni des
+ * accents. Les apostrophes droite et typographique sont équivalentes.
+ */
+export function matchPlace<Place extends { code: string; name: string }>(
+  value: string,
+  places: readonly Place[]
+): Place | undefined {
+  const key = normalizeText(value.replace(/’/g, "'"));
+  return places.find(
+    (place) =>
+      normalizeText(place.name.replace(/’/g, "'")) === key || normalizeText(place.code) === key
+  );
+}
+
+export function placeChoices(places: readonly { name: string }[]): string {
+  return `Choisissez parmi : ${places.map((place) => place.name).join(', ')}.`;
 }
 
 export const shipmentsImport: ImportDefinition<
@@ -52,27 +78,25 @@ export const shipmentsImport: ImportDefinition<
   columns: [
     { header: COLUMNS.container_number, required: true, example: 'MSKU-998811-4' },
     { header: COLUMNS.type, required: true, example: 'Maritime' },
-    { header: COLUMNS.origin, required: true, example: BTS_ORIGINS[0] },
-    { header: COLUMNS.destination, required: true, example: BTS_DESTINATIONS[0] },
+    { header: COLUMNS.origin, required: true, example: EXAMPLE_ORIGIN },
+    { header: COLUMNS.destination, required: true, example: EXAMPLE_DESTINATION },
     { header: COLUMNS.carrier, required: true, example: 'Maersk' },
     { header: COLUMNS.max_volume_cbm, required: true, example: 68 },
     { header: COLUMNS.departure_date, required: false, example: '05/11/2026' },
     { header: COLUMNS.estimated_arrival, required: false, example: '14/12/2026' },
     { header: COLUMNS.notes, required: false, example: 'Scellé n° 44821' },
   ],
-  parseRow(cells) {
+  parseRow(cells, context) {
     const errors: FieldIssue[] = [];
     const type = readChoice(cells, COLUMNS.type, TRANSPORT_MODE_LABELS);
     if (!type) {
       errors.push(issue(COLUMNS.type, `Indiquez ${choiceList(TRANSPORT_MODE_LABELS)}.`));
     }
-    const origin = matchPlace(readText(cells, COLUMNS.origin), BTS_ORIGINS);
-    if (!origin) {
-      errors.push(issue(COLUMNS.origin, `Choisissez parmi : ${BTS_ORIGINS.join(', ')}.`));
-    }
-    const destination = matchPlace(readText(cells, COLUMNS.destination), BTS_DESTINATIONS);
+    const origin = matchPlace(readText(cells, COLUMNS.origin), context.origins);
+    if (!origin) errors.push(issue(COLUMNS.origin, placeChoices(context.origins)));
+    const destination = matchPlace(readText(cells, COLUMNS.destination), context.destinations);
     if (!destination) {
-      errors.push(issue(COLUMNS.destination, `Choisissez parmi : ${BTS_DESTINATIONS.join(', ')}.`));
+      errors.push(issue(COLUMNS.destination, placeChoices(context.destinations)));
     }
     const departure = readDate(cells, COLUMNS.departure_date);
     if (departure === null) {
@@ -100,16 +124,13 @@ export const shipmentsImport: ImportDefinition<
     return {
       item: {
         container_number: containerNumber,
-        type,
-        origin,
-        destination,
-        status: 'planned',
+        transport_mode: type,
+        origin_code: origin.code,
+        destination_code: destination.code,
         carrier: readText(cells, COLUMNS.carrier),
         departure_date: departure || undefined,
         estimated_arrival: arrival || undefined,
         max_volume_cbm: capacity ?? 0,
-        current_volume_cbm: 0,
-        package_ids: [],
         notes: readText(cells, COLUMNS.notes) || undefined,
       },
     };

@@ -13,8 +13,8 @@ import { ImportSummary } from './ImportSummary';
 
 interface ImportExcelButtonProps<Item, Context, Patch> {
   definition: ImportDefinition<Item, Context, Patch>;
-  /** Données enregistrées, lues au moment de la vérification (doublons, fiches à compléter). */
-  getContext: () => Context;
+  /** Données enregistrées, lues sur le serveur au moment de la vérification (doublons, fiches à compléter). */
+  getContext: () => Promise<Context>;
   /** Enregistre les lignes valides : nouvelles fiches et cases vides à compléter. */
   onImport: (batch: ImportBatch<Item, Patch>) => Promise<void>;
 }
@@ -52,11 +52,12 @@ export function ImportExcelButton<Item, Context, Patch>({
 
     setStep({ name: 'reading' });
     try {
-      const [sheet, imported] = await Promise.all([
+      const [sheet, imported, context] = await Promise.all([
         readFirstSheet(file),
         importHistoryApi.getFingerprints(definition.entity),
+        getContext(),
       ]);
-      const plan = validateImport(definition, sheet, getContext(), imported);
+      const plan = validateImport(definition, sheet, context, imported);
       setStep({ name: 'checked', fileName: file.name, plan });
     } catch (error) {
       if (!(error instanceof SpreadsheetFileError)) reportError('Lecture du fichier Excel', error);
@@ -69,17 +70,14 @@ export function ImportExcelButton<Item, Context, Patch>({
   async function handleImport(fileName: string, plan: ImportPlan<Item, Patch>) {
     setStep({ name: 'importing', fileName, plan });
     try {
-      const creates = plan.creates.map(({ item }) => item);
+      const { fingerprint, entity } = definition;
       await onImport({
-        creates,
+        creates: plan.creates.map(({ item }) => item),
         completions: plan.completions.map(({ targetId, changes }) => ({ targetId, changes })),
+        markImported: async (item) => {
+          if (fingerprint) await importHistoryApi.addFingerprints(entity, [fingerprint(item)]);
+        },
       });
-      if (definition.fingerprint) {
-        await importHistoryApi.addFingerprints(
-          definition.entity,
-          creates.map((item) => definition.fingerprint?.(item) ?? '')
-        );
-      }
       close();
     } catch (error) {
       reportError('Import Excel', error);

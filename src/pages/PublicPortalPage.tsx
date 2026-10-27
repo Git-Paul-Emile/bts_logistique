@@ -7,6 +7,7 @@ import { ProcessSection } from '@/features/portal/components/ProcessSection';
 import { TrackingSection } from '@/features/portal/components/TrackingSection';
 import { PriceSimulator } from '@/features/portal/components/PriceSimulator';
 import { CtaBand } from '@/features/portal/components/CtaBand';
+import { BusinessJsonLd } from '@/features/portal/components/BusinessJsonLd';
 
 export function PublicPortalPage() {
   return (
@@ -14,6 +15,7 @@ export function PublicPortalPage() {
       title="Transport de colis Chine, Dubaï, Turquie vers l’Afrique de l’Ouest"
       description="BTS Logistique transporte vos colis de Chine, Dubaï et Turquie vers Abidjan, Dakar et Bamako : groupage maritime, fret aérien, dédouanement et suivi en ligne."
     >
+      <BusinessJsonLd />
       <HeroSection />
       <ServicesSection />
       <NetworkSection />

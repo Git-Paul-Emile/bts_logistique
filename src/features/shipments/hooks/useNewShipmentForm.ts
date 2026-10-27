@@ -1,22 +1,30 @@
 import { useState } from 'react';
-import type { Shipment } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS } from '@/types';
+import type { NewShipmentInput } from '@/api/endpoints/shipments.api';
+import { errorMessage } from '@/lib/errorMessage';
+import type { NetworkLocation, Shipment } from '@/types';
 import { validateShipmentInput } from '@/utils/validators';
 
 /** Capacité proposée à la création : conteneur maritime 40 pieds HQ, ou lot de fret aérien. */
 export const DEFAULT_CAPACITY_CBM: Record<Shipment['type'], number> = { sea: 68, air: 15 };
 
-export type NewShipmentData = Omit<Shipment, 'id' | 'created_at'>;
+interface NewShipmentFormOptions {
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
+  onCreate: (input: NewShipmentInput) => Promise<unknown>;
+  onClose: () => void;
+}
 
 /** État, validation et enregistrement du formulaire « Nouveau conteneur / lot ». */
-export function useNewShipmentForm(
-  onCreate: (data: NewShipmentData) => Promise<Shipment>,
-  onClose: () => void
-) {
+export function useNewShipmentForm({
+  origins,
+  destinations,
+  onCreate,
+  onClose,
+}: NewShipmentFormOptions) {
   const [containerNumber, setContainerNumber] = useState('');
   const [type, setType] = useState<Shipment['type']>('sea');
-  const [origin, setOrigin] = useState(BTS_ORIGINS[0]);
-  const [destination, setDestination] = useState(BTS_DESTINATIONS[0]);
+  const [origin, setOrigin] = useState(origins[0]?.code ?? '');
+  const [destination, setDestination] = useState(destinations[0]?.code ?? '');
   const [carrier, setCarrier] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [estimatedArrival, setEstimatedArrival] = useState('');
@@ -41,22 +49,21 @@ export function useNewShipmentForm(
     try {
       await onCreate({
         container_number: containerNumber.trim(),
-        type,
-        origin,
-        destination,
-        status: 'loading',
+        transport_mode: type,
+        origin_code: origin,
+        destination_code: destination,
         carrier: carrier.trim(),
         departure_date: departureDate || undefined,
         estimated_arrival: estimatedArrival || undefined,
         max_volume_cbm: maxVolume,
-        current_volume_cbm: 0,
-        package_ids: [],
-        notes,
+        notes: notes.trim() || undefined,
       });
       onClose();
       setContainerNumber('');
       setCarrier('');
       setNotes('');
+    } catch (error) {
+      setErrors({ form: errorMessage(error, 'Le lot n’a pas pu être créé. Réessayez.') });
     } finally {
       setIsSubmitting(false);
     }

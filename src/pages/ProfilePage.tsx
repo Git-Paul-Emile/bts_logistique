@@ -1,16 +1,14 @@
 import { Building2, Mail, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/useAuth';
+import { useNotify } from '@/features/backoffice/NotifyContext';
 import { ProfileInfoForm } from '@/features/profile/components/ProfileInfoForm';
 import { ChangePasswordForm } from '@/features/profile/components/ChangePasswordForm';
 import { DeleteAccountSection } from '@/features/profile/components/DeleteAccountSection';
 import { USER_ROLE_DESCRIPTIONS, USER_ROLE_LABELS } from '@/types';
 
-interface ProfilePageProps {
-  onNotify: (message: string) => void;
-}
-
-export function ProfilePage({ onNotify }: ProfilePageProps) {
+export function ProfilePage() {
   const { user, updateProfile } = useAuth();
+  const onNotify = useNotify();
   if (!user) return null;
 
   return (
@@ -68,8 +66,13 @@ export function ProfilePage({ onNotify }: ProfilePageProps) {
             key={`${user.name}-${user.email}-${user.phone ?? ''}`}
             user={user}
             onSave={async (changes) => {
-              await updateProfile(changes);
-              onNotify('Vos informations ont été mises à jour.');
+              const { pendingEmail } = await updateProfile(changes);
+              // La nouvelle adresse ne remplace l'ancienne qu'après un clic sur le lien reçu.
+              onNotify(
+                pendingEmail
+                  ? `Informations enregistrées. Un lien de confirmation a été envoyé à ${pendingEmail}.`
+                  : 'Vos informations ont été mises à jour.'
+              );
             }}
           />
           <ChangePasswordForm onDone={() => onNotify('Votre mot de passe a été modifié.')} />

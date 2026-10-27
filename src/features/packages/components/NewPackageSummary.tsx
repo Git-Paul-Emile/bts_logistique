@@ -19,7 +19,10 @@ function SummaryRow({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-/** Colonne de droite : numéro de suivi, volume, prix calculé et boutons d'enregistrement. */
+/**
+ * Colonne de droite : volume, prix estimé et boutons d'enregistrement. Le numéro de suivi et la
+ * marge collecteur sont fixés par le serveur, visibles sur la fiche du colis créé.
+ */
 export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
   return (
     <div className="space-y-6">
@@ -28,9 +31,17 @@ export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
           Synthèse & Cubage
         </h3>
 
+        {form.formErrors.form && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
+          >
+            {form.formErrors.form}
+          </p>
+        )}
         <div className="space-y-3 text-xs">
-          <SummaryRow label="N° de Suivi attribué :">
-            <span className="font-mono font-bold text-[#003366]">{form.generatedTracking}</span>
+          <SummaryRow label="N° de Suivi :">
+            <span className="font-medium text-slate-700">attribué à l’enregistrement</span>
           </SummaryRow>
           <SummaryRow label="Volume calculé :">
             <span className="text-sm font-bold text-slate-800">
@@ -41,17 +52,12 @@ export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
             <span className="font-medium text-slate-700">{form.weightKg} kg</span>
           </SummaryRow>
           <SummaryRow label="Tarif au m³ :">
-            <span className="font-medium text-slate-700">{formatPrice(form.customCoeff)}</span>
-          </SummaryRow>
-          <SummaryRow label="Dont marge collecteur :">
-            <span className="font-semibold text-[#058441]">
-              {formatPrice(form.collectorMargin)}
-            </span>
+            <span className="font-medium text-slate-700">{formatPrice(form.ratePerCbm)}</span>
           </SummaryRow>
 
           <div className="py-2 text-center">
             <span className="block text-xs font-bold tracking-wider text-slate-600 uppercase">
-              Montant Total Transport
+              Montant Total Transport (estimation)
             </span>
             <span className="mt-1 block text-2xl font-extrabold text-[#002244]">
               {formatPrice(form.finalPrice)}

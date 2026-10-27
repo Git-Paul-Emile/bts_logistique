@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { ArrowLeft, CreditCard, Pencil, RefreshCw } from 'lucide-react';
 import { EditPackageModal } from '@/components/common/EditPackageModal';
+import { Loader } from '@/components/common/Loader';
+import { LoadError } from '@/components/common/LoadError';
 import { PackageLabelModal } from '@/components/common/PackageLabelModal';
 import { RecordPaymentModal } from '@/components/common/RecordPaymentModal';
 import { TrackingShareActions } from '@/components/common/TrackingShareActions';
 import { UpdateStatusModal } from '@/components/common/UpdateStatusModal';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/context/useAuth';
+import { canAccessView } from '@/features/auth/permissions';
 import {
   PackageStatusBadge,
   PaymentStatusBadge,
@@ -17,39 +21,24 @@ import {
   PackageShippingCard,
 } from '@/features/packages/components/PackageInfoCards';
 import { PackageTimeline } from '@/features/packages/components/PackageTimeline';
-import type { Package, PackageUpdateInput, PaymentMethod, StatusUpdateHandler } from '@/types';
+import { usePackage } from '@/features/packages/hooks/usePackages';
 import { formatDate, formatPrice } from '@/utils/formatters';
 
 interface PackageDetailPageProps {
-  pkg: Package | null;
+  packageId: string | null;
   onBack: () => void;
-  onUpdateStatus: StatusUpdateHandler;
-  onUpdatePackage: (id: string, changes: PackageUpdateInput) => Promise<void>;
-  onSendTracking: (pkg: Package) => Promise<void>;
-  onNotify: (message: string) => void;
-  onRecordPayment: (
-    pkgId: string,
-    amount: number,
-    method: PaymentMethod,
-    reference?: string
-  ) => Promise<void>;
 }
 
-export function PackageDetailPage({
-  pkg,
-  onBack,
-  onUpdateStatus,
-  onUpdatePackage,
-  onSendTracking,
-  onNotify,
-  onRecordPayment,
-}: PackageDetailPageProps) {
+export function PackageDetailPage({ packageId, onBack }: PackageDetailPageProps) {
+  const { user } = useAuth();
+  const packageQuery = usePackage(packageId);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeLabelType, setActiveLabelType] = useState<PackageDocument | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const pkg = packageQuery.data;
 
-  if (!pkg) {
+  if (!packageId) {
     return (
       <div className="p-12 text-center text-slate-500">
         <p>Aucun colis sélectionné.</p>
@@ -59,8 +48,18 @@ export function PackageDetailPage({
       </div>
     );
   }
+  if (packageQuery.isPending) return <Loader label="Chargement du colis..." />;
+  if (!pkg) {
+    return (
+      <LoadError
+        message="Ce colis n’a pas pu être chargé. Il n’existe plus, ou il n’appartient pas à votre agence."
+        onRetry={() => void packageQuery.refetch()}
+      />
+    );
+  }
 
-  const remaining = Math.max(0, pkg.final_price - (pkg.amount_paid || 0));
+  const remaining = Math.max(0, pkg.final_price - pkg.amount_paid);
+  const canRecordPayment = Boolean(user && canAccessView(user.role, 'payments'));
 
   return (
     <div className="space-y-6">
@@ -83,7 +82,8 @@ export function PackageDetailPage({
               <PaymentStatusBadge status={pkg.payment_status} />
             </div>
             <p className="mt-0.5 text-xs text-slate-500">
-              Enregistré le {formatDate(pkg.created_at)} • Route : {pkg.origin} → {pkg.destination}
+              Enregistré le {formatDate(pkg.created_at)}, agence {pkg.agency_name}. Route :{' '}
+              {pkg.origin} → {pkg.destination}
             </p>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function PackageDetailPage({
           >
             <RefreshCw size={15} /> <span>Changer statut</span>
           </Button>
-          {remaining > 0 && (
+          {canRecordPayment && remaining > 0 && pkg.status !== 'cancelled' && (
             <Button
               variant="primary"
               onClick={() => setShowPaymentModal(true)}
@@ -123,7 +123,7 @@ export function PackageDetailPage({
           <PackageMeasuresCard pkg={pkg} remaining={remaining} />
         </div>
         <div className="space-y-6">
-          <TrackingShareActions pkg={pkg} onSend={onSendTracking} onNotify={onNotify} />
+          <TrackingShareActions pkg={pkg} />
           <PackageTimeline events={pkg.events} onAddStep={() => setShowStatusModal(true)} />
         </div>
       </div>
@@ -134,26 +134,15 @@ export function PackageDetailPage({
         onClose={() => setActiveLabelType(null)}
         type={activeLabelType || 'label'}
       />
-      <UpdateStatusModal
-        pkg={pkg}
-        isOpen={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
-        onUpdate={onUpdateStatus}
-      />
-      {showEditModal && (
-        <EditPackageModal
-          pkg={pkg}
-          isOpen
-          onClose={() => setShowEditModal(false)}
-          onSave={onUpdatePackage}
-        />
+      {showStatusModal && (
+        <UpdateStatusModal pkg={pkg} isOpen onClose={() => setShowStatusModal(false)} />
       )}
-      <RecordPaymentModal
-        pkg={pkg}
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onRecord={onRecordPayment}
-      />
+      {showEditModal && (
+        <EditPackageModal pkg={pkg} isOpen onClose={() => setShowEditModal(false)} />
+      )}
+      {showPaymentModal && (
+        <RecordPaymentModal pkg={pkg} isOpen onClose={() => setShowPaymentModal(false)} />
+      )}
     </div>
   );
 }

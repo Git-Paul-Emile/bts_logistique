@@ -1,34 +1,42 @@
 import { useMemo, useState } from 'react';
-import type { Client, Package, PricingGrid, TransportMode } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS } from '@/types';
+import type { NewPackageInput } from '@/api/endpoints/packages.api';
+import type { PublicPricing } from '@/api/endpoints/pricing.api';
+import { errorMessage } from '@/lib/errorMessage';
+import type { Client, NetworkLocation, Package, PaymentMethod, TransportMode } from '@/types';
 import { formatPrice } from '@/utils/formatters';
 import { computeCubicMeter, computePrice } from '@/utils/packagePricing';
-import { formatTrackingNumber, randomTrackingSuffix } from '@/utils/trackingNumber';
 import { validateClientInput } from '@/utils/validators';
 
 export type PaymentOption = 'unpaid' | 'partial' | 'paid';
-type NewPackageData = Omit<Package, 'id' | 'created_at' | 'updated_at' | 'events'>;
 
 interface NewPackageFormOptions {
-  clients: Client[];
-  rates: PricingGrid['rates'];
-  onSave: (pkgData: NewPackageData) => Promise<Package>;
-  onDone: (createdPkg: Package) => void;
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
+  rates: PublicPricing['rates'];
+  /** Équipe seulement : le tarif au m³ peut être ajusté pour ce colis. */
+  canOverrideRate: boolean;
+  createClient: (input: { name: string; phone: string }) => Promise<Client>;
+  createPackage: (input: NewPackageInput) => Promise<Package>;
+  onDone: (created: Package) => void;
 }
 
 /** Dimensions proposées à l'ouverture du formulaire : un carton standard. */
 const DEFAULT_DIMENSIONS = { lengthCm: 80, widthCm: 60, heightCm: 50, weightKg: 25 };
 
-/** État, calculs et enregistrement du formulaire « Nouveau colis ». */
-export function useNewPackageForm({ clients, rates, onSave, onDone }: NewPackageFormOptions) {
-  const [clientId, setClientId] = useState(clients[0]?.id || '');
+/**
+ * État, calculs et enregistrement du formulaire « Nouveau colis ». Le prix affiché est une
+ * estimation : le serveur le recalcule, attribue le numéro de suivi et fige la marge collecteur.
+ */
+export function useNewPackageForm(options: NewPackageFormOptions) {
+  const { rates, canOverrideRate } = options;
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [isNewClient, setIsNewClient] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const [origin, setOrigin] = useState(BTS_ORIGINS[0]);
-  const [destination, setDestination] = useState(BTS_DESTINATIONS[0]);
+  const [origin, setOrigin] = useState(options.origins[0]?.code ?? '');
+  const [destination, setDestination] = useState(options.destinations[0]?.code ?? '');
   const [description, setDescription] = useState('');
 
   const [lengthCm, setLengthCm] = useState<number>(DEFAULT_DIMENSIONS.lengthCm);
@@ -39,31 +47,22 @@ export function useNewPackageForm({ clients, rates, onSave, onDone }: NewPackage
   const [customCoeff, setCustomCoeff] = useState<number>(rates.sea.client_rate_per_cbm);
 
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('unpaid');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Changer de mode applique le tarif de la grille ; l'opérateur peut ensuite l'ajuster.
+  // Changer de mode applique le tarif de la grille ; l'équipe peut ensuite l'ajuster.
   const changeTransportMode = (mode: TransportMode) => {
     setTransportMode(mode);
     setCustomCoeff(rates[mode].client_rate_per_cbm);
   };
 
+  const ratePerCbm = canOverrideRate ? customCoeff : rates[transportMode].client_rate_per_cbm;
   const cubicMeter = useMemo(
     () => computeCubicMeter(lengthCm, widthCm, heightCm),
     [lengthCm, widthCm, heightCm]
   );
-
-  const finalPrice = useMemo(
-    () => computePrice(cubicMeter, customCoeff),
-    [cubicMeter, customCoeff]
-  );
-  const collectorMargin = Math.round(cubicMeter * rates[transportMode].collector_margin_per_cbm);
-
-  const [trackingSuffix] = useState(randomTrackingSuffix);
-  const generatedTracking = useMemo(
-    () => formatTrackingNumber(destination, new Date().getFullYear(), trackingSuffix),
-    [destination, trackingSuffix]
-  );
+  const finalPrice = computePrice(cubicMeter, ratePerCbm);
 
   const clearError = (field: string) =>
     setFormErrors((previous) => {
@@ -83,45 +82,50 @@ export function useNewPackageForm({ clients, rates, onSave, onDone }: NewPackage
       const client = validateClientInput({ name: newClientName, phone: newClientPhone });
       if (client.errors.name) nextErrors.newClientName = client.errors.name;
       if (client.errors.phone) nextErrors.newClientPhone = client.errors.phone;
-    } else if (!clients.some((client) => client.id === clientId)) {
+    } else if (!selectedClient) {
       nextErrors.clientId = 'Choisissez le client dans la liste, ou créez un nouveau client.';
     }
-    if (paymentOption === 'partial' && (amountPaid <= 0 || amountPaid >= finalPrice)) {
-      nextErrors.amountPaid = `L’acompte doit être supérieur à 0 et inférieur au prix total : ${formatPrice(finalPrice)}.`;
+    if (origin === destination) {
+      nextErrors.destination = 'La destination doit être différente de l’origine.';
+    }
+    if (
+      paymentOption === 'partial' &&
+      (!Number.isInteger(amountPaid) || amountPaid <= 0 || amountPaid >= finalPrice)
+    ) {
+      nextErrors.amountPaid = `L’acompte est un montant entier, supérieur à 0 et inférieur au prix total : ${formatPrice(finalPrice)}.`;
     }
     return nextErrors;
   }
 
-  function clientName(): string {
-    if (isNewClient) {
-      return newClientName ? `${newClientName} (${newClientPhone})` : 'Nouveau client';
-    }
-    return clients.find((c) => c.id === clientId)?.name ?? 'Client comptoir';
-  }
-
-  function buildPackageData(): NewPackageData {
+  function buildPackageInput(clientId: string): NewPackageInput {
     const initialPaid =
       paymentOption === 'paid' ? finalPrice : paymentOption === 'partial' ? amountPaid : 0;
+    const gridRate = rates[transportMode].client_rate_per_cbm;
     return {
-      tracking_number: generatedTracking,
-      client_id: isNewClient ? `cli-${Date.now()}` : clientId,
-      client_name: clientName(),
-      description,
-      origin,
-      destination,
+      client_id: clientId,
+      origin_code: origin,
+      destination_code: destination,
+      transport_mode: transportMode,
+      description: description.trim() || undefined,
       length_cm: lengthCm,
       width_cm: widthCm,
       height_cm: heightCm,
       weight_kg: weightKg,
-      cubic_meter: cubicMeter,
-      coefficient: customCoeff,
-      final_price: finalPrice,
-      transport_mode: transportMode,
-      collector_margin: collectorMargin,
-      status: 'registered',
-      payment_status: paymentOption,
-      amount_paid: initialPaid,
+      rate_per_cbm: canOverrideRate && customCoeff !== gridRate ? customCoeff : undefined,
+      initial_payment: initialPaid > 0 ? { amount: initialPaid, method: paymentMethod } : undefined,
     };
+  }
+
+  /** Le nouveau client est créé d'abord ; s'il l'est déjà (nouvel essai), il est réutilisé. */
+  async function resolveClientId(): Promise<string> {
+    if (!isNewClient && selectedClient) return selectedClient.id;
+    const created = await options.createClient({
+      name: newClientName.trim(),
+      phone: newClientPhone.trim(),
+    });
+    setSelectedClient(created);
+    setIsNewClient(false);
+    return created.id;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,15 +135,18 @@ export function useNewPackageForm({ clients, rates, onSave, onDone }: NewPackage
     if (Object.keys(nextErrors).length > 0) return;
     setIsSubmitting(true);
     try {
-      onDone(await onSave(buildPackageData()));
+      const created = await options.createPackage(buildPackageInput(await resolveClientId()));
+      options.onDone(created);
+    } catch (error) {
+      setFormErrors({ form: errorMessage(error, 'Le colis n’a pas pu être enregistré.') });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return {
-    clientId,
-    setClientId,
+    selectedClient,
+    setSelectedClient,
     newClientName,
     setNewClientName,
     newClientPhone,
@@ -164,17 +171,18 @@ export function useNewPackageForm({ clients, rates, onSave, onDone }: NewPackage
     setWeightKg,
     transportMode,
     changeTransportMode,
-    customCoeff,
+    canOverrideRate,
+    ratePerCbm,
     setCustomCoeff,
     paymentOption,
     choosePaymentOption,
+    paymentMethod,
+    setPaymentMethod,
     amountPaid,
     setAmountPaid,
     isSubmitting,
     cubicMeter,
     finalPrice,
-    collectorMargin,
-    generatedTracking,
     handleSubmit,
   };
 }

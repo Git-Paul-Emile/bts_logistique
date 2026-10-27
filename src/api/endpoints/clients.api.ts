@@ -1,112 +1,121 @@
-import type { Client, ClientUpdateInput } from '@/types';
-import { reportError } from '@/lib/reportError';
+// Clients : appels à /clients et traduction des réponses vers le type Client du front.
+import { getData, getPage, http, type Page } from '@/api/client';
+import type {
+  Client,
+  ClientUpdateInput,
+  NewClientInput,
+  PackageStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '@/types';
 
-const CLIENTS_STORAGE_KEY = 'bts_clients_v1';
+type Place = { code: string; name: string };
 
-export const initialClients: Client[] = [
-  {
-    id: 'cli-1',
-    name: 'Électro Abidjan SARL (M. Koffi)',
-    phone: '+225 07 48 92 10 33',
-    email: 'koffi.electro@afnet.ci',
-    address: "Zone 4C, Rue des Carrossiers, Abidjan, Côte d'Ivoire",
-    total_billed: 729600,
-    amount_paid: 564800,
-    package_count: 2,
-    created_at: '2026-08-15T10:00:00Z',
-  },
-  {
-    id: 'cli-2',
-    name: 'Boutique Touba Textile (Mme Diop)',
-    phone: '+221 77 654 32 10',
-    email: 'fatou.diop.textile@gmail.com',
-    address: 'Marché HLM, Allée centrale, Dakar, Sénégal',
-    total_billed: 154980,
-    amount_paid: 154980,
-    package_count: 1,
-    created_at: '2026-09-01T14:30:00Z',
-  },
-  {
-    id: 'cli-3',
-    name: 'Quincaillerie du Fleuve (M. Traoré)',
-    phone: '+223 66 12 45 78',
-    email: 'traore.quincaillerie@orangemali.com',
-    address: 'Badalabougou, Près du Palais de la Culture, Bamako, Mali',
-    total_billed: 533250,
-    amount_paid: 0,
-    package_count: 1,
-    created_at: '2026-10-02T09:15:00Z',
-  },
-  {
-    id: 'cli-4',
-    name: 'Mme Awa Sanogo (Importatrice Cosmétiques)',
-    phone: '+225 05 88 14 20 01',
-    email: 'awa.sanogo.import@yahoo.fr',
-    address: "Angré 8ème Tranche, Cocody, Abidjan, Côte d'Ivoire",
-    total_billed: 280000,
-    amount_paid: 280000,
-    package_count: 3,
-    created_at: '2026-07-10T12:00:00Z',
-  },
-];
-
-function loadStoredClients(): Client[] {
-  try {
-    const raw = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(initialClients));
-      return initialClients;
-    }
-    return JSON.parse(raw);
-  } catch (error) {
-    reportError('clients.api : loadStoredClients', error);
-    return initialClients;
-  }
+interface ClientDto {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  agency: Place;
+  created_at: string;
+  /** Absents pour un collecteur : le serveur ne lui envoie aucune donnée financière. */
+  total_billed?: number;
+  amount_paid?: number;
+  balance?: number;
+  has_debt?: boolean;
+  package_count?: number;
 }
 
-function saveClientsToStorage(clients: Client[]) {
-  try {
-    localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clients));
-  } catch (error) {
-    reportError('clients.api : saveClientsToStorage', error);
-  }
+export interface ClientPackageSummary {
+  id: string;
+  tracking_number: string;
+  status: PackageStatus;
+  payment_status: PaymentStatus;
+  final_price: number;
+  amount_paid: number;
+  origin: Place;
+  destination: Place;
+  created_at: string;
+}
+
+export interface ClientPaymentSummary {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  reference: string | null;
+  reverses_payment_id: string | null;
+  allocations: { package_id: string; tracking_number: string; amount: number }[];
+  created_at: string;
+}
+
+export interface ClientDetail {
+  client: Client;
+  recentPackages: ClientPackageSummary[];
+  recentPayments: ClientPaymentSummary[];
+}
+
+function toClient(dto: ClientDto): Client {
+  return {
+    id: dto.id,
+    name: dto.name,
+    phone: dto.phone,
+    email: dto.email ?? undefined,
+    address: dto.address ?? undefined,
+    agency_code: dto.agency.code,
+    agency_name: dto.agency.name,
+    total_billed: dto.total_billed ?? 0,
+    amount_paid: dto.amount_paid ?? 0,
+    balance: dto.balance ?? 0,
+    has_debt: dto.has_debt ?? false,
+    package_count: dto.package_count ?? 0,
+    created_at: dto.created_at,
+  };
+}
+
+/**
+ * Seuls les champs fournis sont envoyés (un import ne complète que des cases vides).
+ * Une chaîne vide efface un champ facultatif côté serveur.
+ */
+function toClientBody(input: Partial<ClientUpdateInput>) {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+}
+
+export type ClientSort = 'name' | '-name' | 'created_at' | '-created_at' | 'balance' | '-balance';
+
+export interface ClientListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  has_debt?: boolean;
+  sort?: ClientSort;
 }
 
 export const clientsApi = {
-  async getClients(): Promise<Client[]> {
-    return loadStoredClients();
+  async list(params: ClientListParams): Promise<Page<Client>> {
+    const page = await getPage<ClientDto>(http.get('/clients', { params }));
+    return { items: page.items.map(toClient), meta: page.meta };
   },
 
-  async getClientById(id: string): Promise<Client | null> {
-    const list = loadStoredClients();
-    return list.find((c) => c.id === id) || null;
-  },
-
-  async createClient(
-    data: Omit<Client, 'id' | 'created_at' | 'total_billed' | 'amount_paid' | 'package_count'>
-  ): Promise<Client> {
-    const list = loadStoredClients();
-    const newClient: Client = {
-      ...data,
-      id: `cli-${crypto.randomUUID()}`,
-      total_billed: 0,
-      amount_paid: 0,
-      package_count: 0,
-      created_at: new Date().toISOString(),
+  /** Fiche détaillée : équipe seulement (montants, colis et paiements récents). */
+  async get(id: string): Promise<ClientDetail> {
+    const body = await getData<{
+      client: ClientDto;
+      recent_packages: ClientPackageSummary[];
+      recent_payments: ClientPaymentSummary[];
+    }>(http.get(`/clients/${id}`));
+    return {
+      client: toClient(body.client),
+      recentPackages: body.recent_packages,
+      recentPayments: body.recent_payments,
     };
-    const nextList = [newClient, ...list];
-    saveClientsToStorage(nextList);
-    return newClient;
   },
 
-  async updateClient(id: string, changes: ClientUpdateInput): Promise<Client | null> {
-    const list = loadStoredClients();
-    const index = list.findIndex((c) => c.id === id);
-    const current = list[index];
-    if (!current) return null;
-    const updated: Client = { ...current, ...changes };
-    list[index] = updated;
-    saveClientsToStorage(list);
-    return updated;
+  async create(input: NewClientInput): Promise<Client> {
+    return toClient(await getData<ClientDto>(http.post('/clients', toClientBody(input))));
+  },
+
+  async update(id: string, changes: Partial<ClientUpdateInput>): Promise<Client> {
+    return toClient(await getData<ClientDto>(http.patch(`/clients/${id}`, toClientBody(changes))));
   },
 };

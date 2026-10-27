@@ -20,8 +20,6 @@ const titles: Record<View, string> = {
   shipments: 'Conteneurs & Lots d’expédition',
   clients: 'Gestion des Clients',
   payments: 'Gestion des Règlements & Paiements',
-  calculator: 'Calculateur de devis rapide',
-  history: 'Historique des calculs & archives',
   settings: 'Tarifs & marges collecteurs',
   users: 'Utilisateurs & collecteurs',
   notifications: 'Notifications',

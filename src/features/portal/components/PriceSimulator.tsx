@@ -1,7 +1,7 @@
 import { formatVolume } from '@/utils/formatters';
 import type { TransportMode } from '@/types';
 import { TRANSPORT_MODE_LABELS } from '@/types';
-import { usePricingGrid } from '@/features/settings/hooks/usePricingGrid';
+import { usePublicPricing } from '@/features/settings/hooks/usePricingGrid';
 import type { Dimensions } from '../hooks/usePriceEstimate';
 import { usePriceEstimate } from '../hooks/usePriceEstimate';
 import { SectionHeading } from './SectionHeading';
@@ -16,15 +16,16 @@ const TRANSPORT_MODES = Object.keys(TRANSPORT_MODE_LABELS) as TransportMode[];
 
 const amountFormatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
-function formatFcfa(amount: number): string {
-  return `${amountFormatter.format(amount)} FCFA`;
+/** Points de suspension tant que le tarif n'est pas chargé (ou s'il n'a pas pu l'être). */
+function formatFcfa(amount: number | null | undefined): string {
+  return amount == null ? '...' : `${amountFormatter.format(amount)} FCFA`;
 }
 
 export function PriceSimulator() {
-  const { grid } = usePricingGrid();
-  const { dimensions, updateDimension, mode, setMode, cubicMeter, priceXof } = usePriceEstimate(
-    grid.rates
-  );
+  const pricing = usePublicPricing();
+  const rates = pricing.data?.rates;
+  const { dimensions, updateDimension, mode, setMode, cubicMeter, priceXof } =
+    usePriceEstimate(rates);
 
   return (
     <section id="simulateur" className="scroll-mt-20 bg-bts-canvas py-16 lg:py-24">
@@ -40,7 +41,7 @@ export function PriceSimulator() {
               <li key={key} className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-sm text-slate-600">{TRANSPORT_MODE_LABELS[key]}</p>
                 <p className="font-display text-base font-bold text-bts-blue">
-                  {formatFcfa(grid.rates[key].client_rate_per_cbm)} / m³
+                  {formatFcfa(rates?.[key].client_rate_per_cbm)} / m³
                 </p>
               </li>
             ))}
@@ -127,6 +128,11 @@ export function PriceSimulator() {
                 Volume : {formatVolume(cubicMeter)}
               </p>
             </div>
+            {pricing.isError && (
+              <p role="alert" className="mt-3 text-sm text-white">
+                Les tarifs n’ont pas pu être chargés. Rechargez la page pour obtenir une estimation.
+              </p>
+            )}
             <p className="mt-4 border-t border-white/15 pt-4 text-xs text-white/65">
               Estimation indicative. Le prix final est établi après mesure du colis en entrepôt.
             </p>

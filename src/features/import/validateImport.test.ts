@@ -8,8 +8,12 @@ const existingClient: Client = {
   id: 'cli-1',
   name: 'Électro Abidjan SARL (M. Koffi)',
   phone: '+225 07 48 92 10 33',
+  agency_code: 'CI-ABJ',
+  agency_name: "Abidjan (Côte d'Ivoire)",
   total_billed: 0,
   amount_paid: 0,
+  balance: 0,
+  has_debt: false,
   package_count: 0,
   created_at: '2026-08-15T10:00:00Z',
 };
@@ -121,6 +125,7 @@ describe('validateImport : fiches déjà enregistrées', () => {
 describe('validateImport : paiements', () => {
   const pkg = {
     id: 'pkg-1',
+    client_id: 'cli-1',
     tracking_number: 'BTS-CI-2026-0089',
     final_price: 100_000,
     amount_paid: 40_000,

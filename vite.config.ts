@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { seoFiles } from './build/seoFiles.ts';
 
 const DEFAULT_API_TARGET = 'http://localhost:4000';
 
@@ -11,7 +12,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env['API_PROXY_TARGET'] || DEFAULT_API_TARGET;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), seoFiles(env['VITE_SITE_URL'])],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -1,83 +1,77 @@
-import type { Payment } from '@/types';
-import { reportError } from '@/lib/reportError';
+// Paiements : appels à /payments. Un versement est réparti sur un ou plusieurs colis du client.
+import { getData, getPage, http, type Page } from '@/api/client';
+import type { Payment, PaymentAllocation, PaymentMethod } from '@/types';
 
-const PAYMENTS_STORAGE_KEY = 'bts_payments_v1';
-
-export const initialPayments: Payment[] = [
-  {
-    id: 'pay-1',
-    client_id: 'cli-1',
-    client_name: 'Électro Abidjan SARL (M. Koffi)',
-    package_id: 'pkg-1',
-    tracking_number: 'BTS-CI-2026-0089',
-    amount: 200000,
-    payment_method: 'mobile_money',
-    reference: 'WAVE-CI-998124',
-    notes: 'Acompte 50% au départ de Chine',
-    created_at: '2026-10-10T11:00:00Z',
-  },
-  {
-    id: 'pay-2',
-    client_id: 'cli-2',
-    client_name: 'Boutique Touba Textile (Mme Diop)',
-    package_id: 'pkg-2',
-    tracking_number: 'BTS-SN-2026-0042',
-    amount: 154980,
-    payment_method: 'cash',
-    reference: 'REC-DKR-0042',
-    notes: "Règlement total au retrait à l'entrepôt de Dakar",
-    created_at: '2026-10-17T11:30:00Z',
-  },
-  {
-    id: 'pay-3',
-    client_id: 'cli-1',
-    client_name: 'Électro Abidjan SARL (M. Koffi)',
-    package_id: 'pkg-4',
-    tracking_number: 'BTS-CI-2026-0094',
-    amount: 364800,
-    payment_method: 'transfer',
-    reference: 'VIR-SGBCI-88410',
-    notes: 'Solde complet réglé avant déchargement magasin',
-    created_at: '2026-10-11T14:20:00Z',
-  },
-];
-
-function loadStoredPayments(): Payment[] {
-  try {
-    const raw = localStorage.getItem(PAYMENTS_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(initialPayments));
-      return initialPayments;
-    }
-    return JSON.parse(raw);
-  } catch (error) {
-    reportError('payments.api : loadStoredPayments', error);
-    return initialPayments;
-  }
+interface PaymentDto {
+  id: string;
+  client: { id: string; name: string };
+  amount: number;
+  method: PaymentMethod;
+  reference: string | null;
+  notes: string | null;
+  author: { id: string; name: string };
+  allocations: PaymentAllocation[];
+  reverses_payment_id: string | null;
+  reversed_by_payment_id: string | null;
+  created_at: string;
 }
 
-function savePaymentsToStorage(payments: Payment[]) {
-  try {
-    localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
-  } catch (error) {
-    reportError('payments.api : savePaymentsToStorage', error);
-  }
+function toPayment(dto: PaymentDto): Payment {
+  const first = dto.allocations[0];
+  return {
+    id: dto.id,
+    client_id: dto.client.id,
+    client_name: dto.client.name,
+    package_id: first?.package_id,
+    tracking_number: first?.tracking_number,
+    allocations: dto.allocations,
+    amount: dto.amount,
+    payment_method: dto.method,
+    reference: dto.reference ?? undefined,
+    notes: dto.notes ?? undefined,
+    author_name: dto.author.name,
+    reverses_payment_id: dto.reverses_payment_id ?? undefined,
+    reversed_by_payment_id: dto.reversed_by_payment_id ?? undefined,
+    created_at: dto.created_at,
+  };
+}
+
+export type PaymentSort = 'created_at' | '-created_at' | 'amount' | '-amount';
+
+export interface PaymentListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  method?: PaymentMethod;
+  client_id?: string;
+  /** Période, dates incluses, au format AAAA-MM-JJ. */
+  from?: string;
+  to?: string;
+  sort?: PaymentSort;
+}
+
+export interface NewPaymentInput {
+  client_id: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  notes?: string;
+  /** Part de chaque colis réglé ; leur somme est égale au montant. */
+  allocations: { package_id: string; amount: number }[];
 }
 
 export const paymentsApi = {
-  async getPayments(): Promise<Payment[]> {
-    return loadStoredPayments();
+  async list(params: PaymentListParams): Promise<Page<Payment>> {
+    const page = await getPage<PaymentDto>(http.get('/payments', { params }));
+    return { items: page.items.map(toPayment), meta: page.meta };
   },
 
-  async recordPayment(data: Omit<Payment, 'id' | 'created_at'>): Promise<Payment> {
-    const list = loadStoredPayments();
-    const newPayment: Payment = {
-      ...data,
-      id: `pay-${crypto.randomUUID()}`,
-      created_at: new Date().toISOString(),
-    };
-    const nextList = [newPayment, ...list];
-    savePaymentsToStorage(nextList);
-    return newPayment;
+  async record(input: NewPaymentInput): Promise<Payment> {
+    return toPayment(await getData<PaymentDto>(http.post('/payments', input)));
+  },
+
+  /** Annulation : une écriture négative, le paiement d'origine reste dans l'historique. */
+  async reverse(id: string, reason: string): Promise<Payment> {
+    return toPayment(await getData<PaymentDto>(http.post(`/payments/${id}/reversal`, { reason })));
   },
 };

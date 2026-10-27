@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { ProfileUpdateInput, UserSession } from '@/types';
+import { errorMessage } from '@/lib/errorMessage';
 import { isValidEmail, isValidPhone } from '@/utils/validators';
 
 interface ProfileInfoFormProps {
@@ -55,12 +56,7 @@ export function ProfileInfoForm({ user, onSave }: ProfileInfoFormProps) {
         phone: values.phone?.trim(),
       });
     } catch (error) {
-      setErrors({
-        form:
-          error instanceof Error && error.message === 'EMAIL_ALREADY_USED'
-            ? 'Cette adresse e-mail est déjà utilisée par un autre compte.'
-            : 'L’enregistrement a échoué. Réessayez.',
-      });
+      setErrors({ form: errorMessage(error, 'L’enregistrement a échoué. Réessayez.') });
     } finally {
       setSaving(false);
     }
@@ -76,7 +72,8 @@ export function ProfileInfoForm({ user, onSave }: ProfileInfoFormProps) {
         Informations personnelles
       </h3>
       <p className="mt-0.5 text-xs text-slate-500">
-        L’adresse e-mail sert à vous connecter et à recevoir les liens de réinitialisation.
+        L’adresse e-mail sert à vous connecter. Une nouvelle adresse est enregistrée après
+        confirmation, par le lien qui lui est envoyé.
       </p>
 
       {errors.form && (

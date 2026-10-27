@@ -1,36 +1,19 @@
 import { Link } from 'react-router';
-import { Plus, Package, Ship, Users, Globe } from 'lucide-react';
+import { Plus, Package as PackageIcon, Ship, Users, Globe } from 'lucide-react';
 import { PATHS } from '@/router/paths';
 import { Button } from '@/components/ui/Button';
 import { DashboardStats } from '@/features/dashboard/components/DashboardStats';
-import { RecentQuotes } from '@/features/dashboard/components/RecentQuotes';
+import { RecentPackages } from '@/features/dashboard/components/RecentPackages';
 import { Loader } from '@/components/common/Loader';
-import type { Quote, View } from '@/types';
+import { LoadError } from '@/components/common/LoadError';
+import { useBackOfficeNavigation } from '@/features/backoffice/NavigationContext';
+import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
+import { usePublicPricing } from '@/features/settings/hooks/usePricingGrid';
 
-interface DashboardPageProps {
-  quotes: Quote[];
-  coefficient: number;
-  totalVolume: number;
-  totalRevenue: number;
-  search: string;
-  setSearch: (value: string) => void;
-  onNavigate: (view: View) => void;
-  loading: boolean;
-}
-
-export function DashboardPage({
-  quotes,
-  coefficient,
-  totalVolume,
-  totalRevenue,
-  search,
-  setSearch,
-  onNavigate,
-  loading,
-}: DashboardPageProps) {
-  if (loading) {
-    return <Loader label="Chargement du tableau de bord..." />;
-  }
+export function DashboardPage() {
+  const { navigate: onNavigate, openPackage } = useBackOfficeNavigation();
+  const dashboard = useDashboard();
+  const pricing = usePublicPricing();
 
   return (
     <div className="space-y-6">
@@ -73,7 +56,7 @@ export function DashboardPage({
             <p className="text-sm font-bold text-[#003366]">Gestion des Colis</p>
             <span className="text-xs text-slate-500">Suivi & étiquetage</span>
           </div>
-          <Package size={22} className="text-[#003366]" />
+          <PackageIcon size={22} className="text-[#003366]" />
         </button>
 
         <button
@@ -112,20 +95,21 @@ export function DashboardPage({
         </Link>
       </div>
 
-      <DashboardStats
-        totalQuotes={quotes.length}
-        totalVolume={totalVolume}
-        totalRevenue={totalRevenue}
-        coefficient={coefficient}
-      />
+      {dashboard.isPending && <Loader label="Chargement du tableau de bord..." />}
+      {dashboard.isError && (
+        <LoadError
+          message="Les indicateurs n’ont pas pu être chargés."
+          onRetry={() => void dashboard.refetch()}
+        />
+      )}
+      {dashboard.data && (
+        <DashboardStats
+          summary={dashboard.data}
+          seaRatePerCbm={pricing.data?.rates.sea.client_rate_per_cbm}
+        />
+      )}
 
-      <RecentQuotes
-        quotes={quotes}
-        search={search}
-        setSearch={setSearch}
-        onViewAll={() => onNavigate('history')}
-        onNewCalculation={() => onNavigate('calculator')}
-      />
+      <RecentPackages onOpenPackage={openPackage} onViewAll={() => onNavigate('packages')} />
     </div>
   );
 }

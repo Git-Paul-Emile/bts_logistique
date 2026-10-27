@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertTriangle, CheckCircle, Package as PackageIcon, Truck } from 'lucide-react';
-import type { Package } from '@/types';
+import type { ActivePackageStatus } from '@/api/endpoints/dashboard.api';
 
 interface StatCardProps {
   label: string;
@@ -23,46 +22,36 @@ function PackageStatCard({ label, value, icon: Icon, iconClass, valueClass }: St
   );
 }
 
-/** Les quatre compteurs en tête de la liste des colis. */
-export function PackageStats({ packages }: { packages: Package[] }) {
-  const stats = useMemo(
-    () => ({
-      total: packages.length,
-      inTransit: packages.filter((p) => p.status === 'in_transit').length,
-      arrived: packages.filter((p) => p.status === 'arrived').length,
-      unpaid: packages.filter(
-        (p) => p.payment_status === 'unpaid' || p.payment_status === 'partial'
-      ).length,
-    }),
-    [packages]
-  );
+/** Les quatre compteurs en tête de la liste des colis, calculés par le serveur. */
+export function PackageStats({ inProgress }: { inProgress: Record<ActivePackageStatus, number> }) {
+  const total = Object.values(inProgress).reduce((sum, count) => sum + count, 0);
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
       <PackageStatCard
-        label="Total Colis"
-        value={stats.total}
+        label="Colis en cours"
+        value={total}
         icon={PackageIcon}
         iconClass="text-[#003366]"
         valueClass="text-slate-800"
       />
       <PackageStatCard
         label="En Transit (Mer/Air)"
-        value={stats.inTransit}
+        value={inProgress.in_transit}
         icon={Truck}
         iconClass="text-amber-500"
         valueClass="text-amber-600"
       />
       <PackageStatCard
         label="Arrivés en Hub"
-        value={stats.arrived}
+        value={inProgress.arrived}
         icon={CheckCircle}
         iconClass="text-emerald-500"
         valueClass="text-emerald-600"
       />
       <PackageStatCard
-        label="Paiements en attente"
-        value={stats.unpaid}
+        label="En attente douane"
+        value={inProgress.on_hold}
         icon={AlertTriangle}
         iconClass="text-rose-500"
         valueClass="text-rose-600"

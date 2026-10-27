@@ -1,154 +1,72 @@
-import type { AppUser, AppUserInput } from '@/types';
-import { reportError } from '@/lib/reportError';
+// Comptes du personnel : appels à /users (administrateur seulement).
+import { getData, getPage, http, type Page } from '@/api/client';
+import type { AppUser, AppUserInput, UserRole } from '@/types';
 
-// Version incrémentée à chaque changement des comptes de démonstration, pour qu'ils apparaissent
-// aussi dans les navigateurs qui avaient déjà une liste enregistrée.
-const USERS_STORAGE_KEY = 'bts_users_v3';
-
-// Comptes de démonstration : un par rôle (administrateur, gestionnaire, collecteur).
-const initialUsers: AppUser[] = [
-  {
-    id: 'usr_admin',
-    name: 'Administrateur BTS',
-    email: 'admin@bts-logistique.fr',
-    role: 'admin',
-    agency: "Abidjan (Côte d'Ivoire)",
-    active: true,
-    created_at: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'usr_default',
-    name: 'Thomas Lefèvre',
-    email: 'thomas.lefevre@bts-logistique.fr',
-    role: 'manager',
-    agency: "Abidjan (Côte d'Ivoire)",
-    active: true,
-    created_at: '2026-10-01T08:00:00Z',
-  },
-  {
-    id: 'usr_collector',
-    name: 'Collecteur Guangzhou',
-    email: 'collecteur@bts-logistique.fr',
-    role: 'collector',
-    agency: 'Guangzhou (Chine)',
-    active: true,
-    created_at: '2026-10-01T08:00:00Z',
-  },
-];
-
-function loadStoredUsers(): AppUser[] {
-  try {
-    const raw = localStorage.getItem(USERS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AppUser[]) : initialUsers;
-  } catch (error) {
-    reportError('users.api : loadStoredUsers', error);
-    return initialUsers;
-  }
+interface UserDto {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: UserRole;
+  agency: { code: string; name: string };
+  active: boolean;
+  invitation_pending: boolean;
+  created_at: string;
+  archived_at: string | null;
 }
 
-function saveUsers(users: AppUser[]): void {
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+function toAppUser(dto: UserDto): AppUser {
+  return {
+    id: dto.id,
+    name: dto.name,
+    email: dto.email,
+    phone: dto.phone ?? undefined,
+    role: dto.role,
+    agency: dto.agency.name,
+    agency_code: dto.agency.code,
+    active: dto.active,
+    invitation_pending: dto.invitation_pending,
+    created_at: dto.created_at,
+    archived_at: dto.archived_at ?? undefined,
+  };
 }
 
-export const LAST_ADMIN_ERROR = 'LAST_ADMIN';
-
-function canSignIn(user: AppUser): boolean {
-  return user.active && !user.archived_at;
+/**
+ * Seuls les champs fournis sont envoyés (un import ne complète que des cases vides).
+ * Une chaîne vide efface le téléphone côté serveur.
+ */
+function toUserBody(input: Partial<AppUserInput>) {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
 
-function findUserOrThrow(users: AppUser[], id: string): { index: number; user: AppUser } {
-  const index = users.findIndex((user) => user.id === id);
-  const user = users[index];
-  if (!user) throw new Error(`Utilisateur introuvable : ${id}`);
-  return { index, user };
+export interface UserListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  archived?: boolean;
+  role?: UserRole;
 }
 
-// Simulation en attendant le back. Côté serveur, la création enverra l'e-mail
-// d'invitation et l'unicité de l'adresse sera garantie par la base.
 export const usersApi = {
-  async getUsers(): Promise<AppUser[]> {
-    return loadStoredUsers();
+  async list(params: UserListParams): Promise<Page<AppUser>> {
+    const page = await getPage<UserDto>(http.get('/users', { params }));
+    return { items: page.items.map(toAppUser), meta: page.meta };
   },
 
-  async findActiveUserByEmail(email: string): Promise<AppUser | null> {
-    const normalized = email.trim().toLowerCase();
-    return (
-      loadStoredUsers().find(
-        (user) => canSignIn(user) && user.email.toLowerCase() === normalized
-      ) ?? null
-    );
+  /** Crée le compte et envoie l'e-mail d'invitation : la personne choisit son mot de passe. */
+  async invite(input: AppUserInput): Promise<AppUser> {
+    return toAppUser(await getData<UserDto>(http.post('/users', toUserBody(input))));
   },
 
-  async countOtherActiveAdmins(userId: string): Promise<number> {
-    return loadStoredUsers().filter(
-      (user) => user.id !== userId && user.role === 'admin' && canSignIn(user)
-    ).length;
+  async update(id: string, input: Partial<AppUserInput>): Promise<AppUser> {
+    return toAppUser(await getData<UserDto>(http.patch(`/users/${id}`, toUserBody(input))));
   },
 
-  /** Suppression demandée par la personne elle-même : le compte est archivé, jamais effacé. */
-  async archiveOwnAccount(userId: string): Promise<AppUser> {
-    const users = loadStoredUsers();
-    const { index, user } = findUserOrThrow(users, userId);
-    if (user.role === 'admin' && (await usersApi.countOtherActiveAdmins(userId)) === 0) {
-      throw new Error(LAST_ADMIN_ERROR);
-    }
-    const archived: AppUser = { ...user, archived_at: new Date().toISOString() };
-    users[index] = archived;
-    saveUsers(users);
-    return archived;
+  async setActive(id: string, active: boolean): Promise<AppUser> {
+    return toAppUser(await getData<UserDto>(http.patch(`/users/${id}/status`, { active })));
   },
 
-  async restoreUser(userId: string): Promise<AppUser> {
-    const users = loadStoredUsers();
-    const { index, user } = findUserOrThrow(users, userId);
-    const { archived_at, ...restored } = user;
-    void archived_at;
-    users[index] = restored;
-    saveUsers(users);
-    return restored;
-  },
-
-  async getUserById(id: string): Promise<AppUser | null> {
-    return loadStoredUsers().find((user) => user.id === id) ?? null;
-  },
-
-  async createUser(input: AppUserInput): Promise<AppUser> {
-    const users = loadStoredUsers();
-    if (users.some((user) => user.email.toLowerCase() === input.email.toLowerCase())) {
-      throw new Error('EMAIL_ALREADY_USED');
-    }
-    const created: AppUser = {
-      ...input,
-      id: `usr-${crypto.randomUUID()}`,
-      active: true,
-      created_at: new Date().toISOString(),
-    };
-    saveUsers([created, ...users]);
-    return created;
-  },
-
-  async updateUser(id: string, input: AppUserInput): Promise<AppUser> {
-    const users = loadStoredUsers();
-    const { index, user } = findUserOrThrow(users, id);
-    if (
-      users.some(
-        (other) => other.id !== id && other.email.toLowerCase() === input.email.toLowerCase()
-      )
-    ) {
-      throw new Error('EMAIL_ALREADY_USED');
-    }
-    const updated: AppUser = { ...user, ...input };
-    users[index] = updated;
-    saveUsers(users);
-    return updated;
-  },
-
-  async setUserActive(id: string, active: boolean): Promise<AppUser> {
-    const users = loadStoredUsers();
-    const { index, user } = findUserOrThrow(users, id);
-    const updated: AppUser = { ...user, active };
-    users[index] = updated;
-    saveUsers(users);
-    return updated;
+  async restore(id: string): Promise<AppUser> {
+    return toAppUser(await getData<UserDto>(http.post(`/users/${id}/restore`)));
   },
 };

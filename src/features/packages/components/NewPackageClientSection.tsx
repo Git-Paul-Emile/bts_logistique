@@ -1,20 +1,42 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
-import type { Client } from '@/types';
-import { BTS_DESTINATIONS, BTS_ORIGINS } from '@/types';
-import { clientToOption, toOptions } from '@/utils/selectOptions';
+import { useClientList } from '@/features/clients/hooks/useClients';
+import { locationOptions } from '@/features/locations/useLocations';
+import { useDebounce } from '@/hooks/useDebounce';
+import type { NetworkLocation } from '@/types';
+import { clientToOption } from '@/utils/selectOptions';
 import type { NewPackageForm } from '../hooks/useNewPackageForm';
+
+/** Nombre de clients proposés dans la liste ; la recherche interroge le serveur. */
+const CLIENT_CHOICES = 50;
 
 interface NewPackageClientSectionProps {
   form: NewPackageForm;
-  clients: Client[];
+  origins: readonly NetworkLocation[];
+  destinations: readonly NetworkLocation[];
 }
 
 /** Section 1 du nouveau colis : client (existant ou nouveau), trajet et contenu. */
-export function NewPackageClientSection({ form, clients }: NewPackageClientSectionProps) {
-  const clientOptions = useMemo(() => clients.map(clientToOption), [clients]);
+export function NewPackageClientSection({
+  form,
+  origins,
+  destinations,
+}: NewPackageClientSectionProps) {
+  const [clientSearch, setClientSearch] = useState('');
+  const debouncedSearch = useDebounce(clientSearch.trim());
+  const clients = useClientList(
+    { limit: CLIENT_CHOICES, sort: 'name', search: debouncedSearch || undefined },
+    !form.isNewClient
+  );
+  const found = clients.data?.items ?? [];
+  const selected = form.selectedClient;
+  // Le client choisi reste affiché même quand une nouvelle recherche ne le renvoie plus.
+  const candidates = [
+    ...(selected && !found.some((client) => client.id === selected.id) ? [selected] : []),
+    ...found,
+  ];
 
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
@@ -64,13 +86,14 @@ export function NewPackageClientSection({ form, clients }: NewPackageClientSecti
           <FieldLabel htmlFor="package-client">Sélectionner un client enregistré *</FieldLabel>
           <SearchableSelect
             id="package-client"
-            value={form.clientId}
+            value={selected?.id ?? ''}
             error={form.formErrors.clientId}
             onChange={(id) => {
               form.clearError('clientId');
-              form.setClientId(id);
+              form.setSelectedClient(candidates.find((client) => client.id === id) ?? null);
             }}
-            options={clientOptions}
+            onSearchChange={setClientSearch}
+            options={candidates.map(clientToOption)}
             placeholder="Choisir un client"
             searchPlaceholder="Nom, entreprise ou téléphone"
             emptyMessage="Aucun client ne correspond. Vérifiez l'orthographe ou le numéro."
@@ -84,8 +107,11 @@ export function NewPackageClientSection({ form, clients }: NewPackageClientSecti
           <SearchableSelect
             id="package-origin"
             value={form.origin}
-            onChange={form.setOrigin}
-            options={toOptions(BTS_ORIGINS)}
+            onChange={(code) => {
+              form.clearError('destination');
+              form.setOrigin(code);
+            }}
+            options={locationOptions(origins)}
           />
         </div>
         <div>
@@ -93,8 +119,12 @@ export function NewPackageClientSection({ form, clients }: NewPackageClientSecti
           <SearchableSelect
             id="package-destination"
             value={form.destination}
-            onChange={form.setDestination}
-            options={toOptions(BTS_DESTINATIONS)}
+            error={form.formErrors.destination}
+            onChange={(code) => {
+              form.clearError('destination');
+              form.setDestination(code);
+            }}
+            options={locationOptions(destinations)}
           />
         </div>
       </div>

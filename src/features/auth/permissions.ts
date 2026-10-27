@@ -15,12 +15,20 @@ const VIEW_ACCESS: Record<View, UserRole[]> = {
   shipments: STAFF,
   clients: STAFF,
   payments: STAFF,
-  calculator: STAFF,
-  history: STAFF,
   settings: ADMIN_ONLY,
   users: ADMIN_ONLY,
 };
 
 export function canAccessView(role: UserRole, view: View): boolean {
   return VIEW_ACCESS[view].includes(role);
+}
+
+/** Import Excel : réservé à l'équipe, comme le suivi des lignes déjà importées côté serveur. */
+export function canImport(role: UserRole): boolean {
+  return STAFF.includes(role);
+}
+
+/** Tarif au m³ personnalisé sur un colis : réservé à l'équipe, le serveur le refuse aux autres. */
+export function canOverrideRate(role: UserRole): boolean {
+  return STAFF.includes(role);
 }

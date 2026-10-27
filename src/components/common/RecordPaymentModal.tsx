@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useNotify } from '@/features/backoffice/NotifyContext';
+import { useRecordPayment } from '@/features/payments/hooks/usePayments';
+import { errorMessage } from '@/lib/errorMessage';
 import type { Package, PaymentMethod } from '@/types';
 import { PAYMENT_METHOD_LABELS } from '@/types';
 import { formatPrice } from '@/utils/formatters';
@@ -12,27 +15,25 @@ interface RecordPaymentModalProps {
   pkg: Package | null;
   isOpen: boolean;
   onClose: () => void;
-  onRecord: (
-    pkgId: string,
-    amount: number,
-    method: PaymentMethod,
-    reference?: string
-  ) => Promise<void>;
 }
 
-export function RecordPaymentModal({ pkg, isOpen, onClose, onRecord }: RecordPaymentModalProps) {
+/** Encaissement d'un paiement sur un colis : réservé à l'équipe, comme côté serveur. */
+export function RecordPaymentModal({ pkg, isOpen, onClose }: RecordPaymentModalProps) {
   const remaining = Math.max(0, (pkg?.final_price ?? 0) - (pkg?.amount_paid || 0));
   const [amount, setAmount] = useState<number>(remaining);
   const [method, setMethod] = useState<PaymentMethod>('mobile_money');
   const [reference, setReference] = useState('');
   const [amountError, setAmountError] = useState('');
+  const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const recordPayment = useRecordPayment();
+  const notify = useNotify();
 
   if (!pkg) return null;
 
   function getAmountError(value: number): string {
-    if (!Number.isFinite(value) || value <= 0) {
-      return 'Saisissez le montant encaissé, supérieur à 0 F CFA.';
+    if (!Number.isInteger(value) || value <= 0) {
+      return 'Saisissez le montant encaissé, nombre entier supérieur à 0 F CFA.';
     }
     if (remaining > 0 && value > remaining) {
       return `Le montant ne peut pas dépasser le reste à payer : ${formatPrice(remaining)}.`;
@@ -46,9 +47,19 @@ export function RecordPaymentModal({ pkg, isOpen, onClose, onRecord }: RecordPay
     setAmountError(error);
     if (error) return;
     setIsSubmitting(true);
+    setFormError('');
     try {
-      await onRecord(pkg.id, amount, method, reference);
+      await recordPayment.mutateAsync({
+        client_id: pkg.client_id,
+        amount,
+        method,
+        reference: reference.trim() || undefined,
+        allocations: [{ package_id: pkg.id, amount }],
+      });
+      notify(`Paiement de ${formatPrice(amount)} enregistré pour ${pkg.tracking_number}.`);
       onClose();
+    } catch (error) {
+      setFormError(errorMessage(error, 'Le paiement n’a pas pu être enregistré. Réessayez.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -62,6 +73,14 @@ export function RecordPaymentModal({ pkg, isOpen, onClose, onRecord }: RecordPay
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"
+          >
+            {formError}
+          </p>
+        )}
         <div className="space-y-1 rounded-lg border bg-slate-50 p-3 text-xs">
           <div className="flex justify-between">
             <span className="text-slate-500">Client :</span>

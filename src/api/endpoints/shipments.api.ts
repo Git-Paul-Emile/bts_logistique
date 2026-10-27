@@ -1,115 +1,86 @@
-import type { Shipment } from '@/types';
-import { reportError } from '@/lib/reportError';
+// Conteneurs et lots : appels à /shipments.
+import { getData, getPage, http, type Page } from '@/api/client';
+import type { Shipment, ShipmentStatus, TransportMode } from '@/types';
 
-const SHIPMENTS_STORAGE_KEY = 'bts_shipments_v1';
+type Place = { code: string; name: string };
 
-export const initialShipments: Shipment[] = [
-  {
-    id: 'shp-1',
-    container_number: 'MSKU-820491-0 (Conteneur 40HQ)',
-    type: 'sea',
-    origin: 'Guangzhou (Chine)',
-    destination: "Abidjan (Côte d'Ivoire)",
-    status: 'in_transit',
-    carrier: 'Maersk Line / Navire Maersk Mc-Kinney',
-    departure_date: '2026-10-12',
-    estimated_arrival: '2026-11-14',
-    max_volume_cbm: 68,
-    current_volume_cbm: 54.8,
-    package_ids: ['pkg-1', 'pkg-4'],
-    notes: 'Lot maritime N°26-OCT-GZ-ABJ. Scellé douanier N°CN984214.',
-    created_at: '2026-10-08T10:00:00Z',
-  },
-  {
-    id: 'shp-2',
-    container_number: 'EK-CARGO-704 (Fret Aérien Express)',
-    type: 'air',
-    origin: 'Dubaï (EAU)',
-    destination: 'Dakar (Sénégal)',
-    status: 'arrived',
-    carrier: 'Emirates SkyCargo EK9832',
-    departure_date: '2026-10-08',
-    estimated_arrival: '2026-10-10',
-    actual_arrival: '2026-10-10',
-    max_volume_cbm: 15,
-    current_volume_cbm: 11.2,
-    package_ids: ['pkg-2'],
-    notes: 'Vol cargo direct avec escale technique. Marchandises sensibles.',
-    created_at: '2026-10-04T12:00:00Z',
-  },
-  {
-    id: 'shp-3',
-    container_number: 'CMA-U781290-3 (Conteneur 20FT)',
-    type: 'sea',
-    origin: 'Istanbul (Turquie)',
-    destination: 'Bamako (Mali) via Dakar',
-    status: 'loading',
-    carrier: 'CMA CGM',
-    departure_date: '2026-10-24',
-    estimated_arrival: '2026-11-28',
-    max_volume_cbm: 33,
-    current_volume_cbm: 18.5,
-    package_ids: ['pkg-3'],
-    notes: "Groupage en cours au hub d'Istanbul. Remplissage à 56%.",
-    created_at: '2026-10-16T08:00:00Z',
-  },
-];
-
-function loadStoredShipments(): Shipment[] {
-  try {
-    const raw = localStorage.getItem(SHIPMENTS_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(SHIPMENTS_STORAGE_KEY, JSON.stringify(initialShipments));
-      return initialShipments;
-    }
-    return JSON.parse(raw);
-  } catch (error) {
-    reportError('shipments.api : loadStoredShipments', error);
-    return initialShipments;
-  }
+interface ShipmentDto {
+  id: string;
+  container_number: string;
+  transport_mode: TransportMode;
+  carrier: string;
+  status: ShipmentStatus;
+  origin: Place;
+  destination: Place;
+  max_volume_cbm: number;
+  current_volume_cbm: number;
+  package_count: number;
+  departure_date: string | null;
+  estimated_arrival: string | null;
+  actual_arrival: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
-function saveShipmentsToStorage(shipments: Shipment[]) {
-  try {
-    localStorage.setItem(SHIPMENTS_STORAGE_KEY, JSON.stringify(shipments));
-  } catch (error) {
-    reportError('shipments.api : saveShipmentsToStorage', error);
-  }
+function toShipment(dto: ShipmentDto): Shipment {
+  return {
+    id: dto.id,
+    container_number: dto.container_number,
+    type: dto.transport_mode,
+    origin: dto.origin.name,
+    destination: dto.destination.name,
+    origin_code: dto.origin.code,
+    destination_code: dto.destination.code,
+    status: dto.status,
+    carrier: dto.carrier,
+    departure_date: dto.departure_date ?? undefined,
+    estimated_arrival: dto.estimated_arrival ?? undefined,
+    actual_arrival: dto.actual_arrival ?? undefined,
+    max_volume_cbm: dto.max_volume_cbm,
+    current_volume_cbm: dto.current_volume_cbm,
+    package_count: dto.package_count,
+    notes: dto.notes ?? undefined,
+    created_at: dto.created_at,
+  };
 }
+
+export interface ShipmentListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: ShipmentStatus;
+  transport_mode?: TransportMode;
+  sort?: 'created_at' | '-created_at' | 'departure_date' | '-departure_date';
+}
+
+export interface NewShipmentInput {
+  container_number: string;
+  transport_mode: TransportMode;
+  carrier: string;
+  origin_code: string;
+  destination_code: string;
+  max_volume_cbm: number;
+  departure_date?: string;
+  estimated_arrival?: string;
+  notes?: string;
+}
+
+/** Compléments apportés par un import Excel : seules des cases vides sont remplies. */
+export type ShipmentUpdateInput = Partial<
+  Pick<NewShipmentInput, 'departure_date' | 'estimated_arrival' | 'notes'>
+>;
 
 export const shipmentsApi = {
-  async getShipments(): Promise<Shipment[]> {
-    return loadStoredShipments();
+  async list(params: ShipmentListParams): Promise<Page<Shipment>> {
+    const page = await getPage<ShipmentDto>(http.get('/shipments', { params }));
+    return { items: page.items.map(toShipment), meta: page.meta };
   },
 
-  async getShipmentById(id: string): Promise<Shipment | null> {
-    const list = loadStoredShipments();
-    return list.find((s) => s.id === id) || null;
+  async create(input: NewShipmentInput): Promise<Shipment> {
+    return toShipment(await getData<ShipmentDto>(http.post('/shipments', input)));
   },
 
-  async createShipment(data: Omit<Shipment, 'id' | 'created_at'>): Promise<Shipment> {
-    const list = loadStoredShipments();
-    const newShipment: Shipment = {
-      ...data,
-      id: `shp-${crypto.randomUUID()}`,
-      created_at: new Date().toISOString(),
-    };
-    const nextList = [newShipment, ...list];
-    saveShipmentsToStorage(nextList);
-    return newShipment;
-  },
-
-  async updateShipment(
-    id: string,
-    changes: Partial<Omit<Shipment, 'id' | 'created_at'>>
-  ): Promise<Shipment | null> {
-    const list = loadStoredShipments();
-    const index = list.findIndex((shipment) => shipment.id === id);
-    const current = list[index];
-    if (!current) return null;
-    const updated: Shipment = { ...current, ...changes };
-    list[index] = updated;
-    saveShipmentsToStorage(list);
-    return updated;
+  async update(id: string, changes: ShipmentUpdateInput): Promise<Shipment> {
+    return toShipment(await getData<ShipmentDto>(http.patch(`/shipments/${id}`, changes)));
   },
 };

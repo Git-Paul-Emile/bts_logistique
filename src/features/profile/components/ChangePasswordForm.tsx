@@ -2,7 +2,8 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { PasswordInput } from '@/components/ui/PasswordInput';
-import { authApi } from '@/api/endpoints/auth.api';
+import { useChangePassword } from '@/features/auth/hooks/useAccountMutations';
+import { errorMessage } from '@/lib/errorMessage';
 import { getPasswordError, PASSWORD_MIN_LENGTH } from '@/utils/validators';
 
 interface ChangePasswordFormProps {
@@ -22,6 +23,7 @@ export function ChangePasswordForm({ onDone }: ChangePasswordFormProps) {
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
+  const changePassword = useChangePassword();
 
   const update = (key: keyof typeof EMPTY, value: string) => {
     setErrors((previous) => ({ ...previous, [key]: undefined, form: undefined }));
@@ -48,11 +50,14 @@ export function ChangePasswordForm({ onDone }: ChangePasswordFormProps) {
     }
     setSaving(true);
     try {
-      await authApi.changePassword({ currentPassword: values.current, newPassword: values.next });
+      await changePassword.mutateAsync({
+        currentPassword: values.current,
+        newPassword: values.next,
+      });
       setValues(EMPTY);
       onDone();
-    } catch {
-      setErrors({ form: 'Le mot de passe actuel est incorrect.' });
+    } catch (error) {
+      setErrors({ form: errorMessage(error, 'Le mot de passe n’a pas pu être modifié.') });
     } finally {
       setSaving(false);
     }
