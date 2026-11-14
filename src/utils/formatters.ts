@@ -1,9 +1,11 @@
 export { formatDate, formatDateTime } from './formatDate';
 
 export function formatPrice(value: number): string {
-  return `${new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
     maximumFractionDigits: 0,
-  }).format(Math.round(value))} F CFA`;
+  }).format(Math.round(value));
 }
 
 export function formatVolume(cubicMeter: number): string {

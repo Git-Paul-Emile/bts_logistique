@@ -13,11 +13,10 @@ export const PORTAL_NAV_LINKS = [
 
 export const LEGAL_LINKS = [
   { href: '/confidentialite', label: 'Politique de confidentialité' },
-  { href: '/cgu', label: 'Conditions générales d’utilisation' },
+  { href: '/cgu', label: "Conditions générales d'utilisation" },
 ] as const;
 
 // Photos sous licence Unsplash (usage commercial gratuit, sans attribution obligatoire).
-// À remplacer par des photos des entrepôts BTS dès qu'elles sont disponibles.
 const unsplash = (photoId: string, width: number) =>
   `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=${width}&q=75`;
 
@@ -27,20 +26,19 @@ export const PORTAL_IMAGES = {
   air: unsplash('photo-1436491865332-7a61a109cc05', 800),
   customs: unsplash('photo-1631176315313-203dab297716', 800),
   warehouse: unsplash('photo-1553413077-190dd305871c', 800),
-  // Visuel fourni par BTS, servi depuis public/images.
   whyUs: '/images/triptyque-transports.webp',
 } as const;
 
 export const CONTACT = {
-  phoneDisplay: '+225 27 21 00 00',
-  phoneHref: 'tel:+22527210000',
-  email: 'contact@bts-logistique.com',
-  address: 'Zone 4C, Rue des Carrossiers, Treichville, Abidjan',
+  phoneDisplay: '+33 7 53 21 61 37',
+  phoneHref: 'tel:+33753216137',
+  email: 'contact@btslogistique.com',
+  address: 'Europe - Afrique',
 } as const;
 
 export const HIGHLIGHTS = [
-  { title: 'Groupage maritime', text: 'Conteneurs 40HQ, prix au m³' },
-  { title: 'Fret aérien', text: 'Livré en 5 à 7 jours ouvrés' },
+  { title: 'Groupage maritime', text: 'Conteneurs sécurisés, prix au m³' },
+  { title: 'Fret aérien', text: 'Expéditions cargo régulières' },
   { title: 'Suivi en ligne', text: 'Chaque étape visible' },
   { title: 'Dédouanement inclus', text: 'Formalités prises en charge' },
 ] as const;
@@ -48,38 +46,35 @@ export const HIGHLIGHTS = [
 export const SERVICES = [
   {
     title: 'Groupage maritime',
-    description: 'Départs bimensuels depuis Guangzhou et Yiwu, prix calculé au mètre cube.',
+    description: "Départs réguliers depuis l'Europe vers l'Afrique, facturation au mètre cube.",
     image: PORTAL_IMAGES.sea,
     imageAlt: 'Porte-conteneurs en mer',
   },
   {
     title: 'Fret aérien express',
-    description: 'Vols cargo hebdomadaires depuis Dubaï et Istanbul.',
+    description: "Liaisons cargo rapides pour vos colis urgents de l'Europe vers l'Afrique.",
     image: PORTAL_IMAGES.air,
     imageAlt: 'Avion en vol au-dessus des nuages',
   },
   {
     title: 'Dédouanement',
-    description: 'Formalités au port et à l’aéroport assurées par nos commissionnaires.',
+    description: "Formalités portuaires et aéroportuaires prises en charge à l'arrivée.",
     image: PORTAL_IMAGES.customs,
     imageAlt: 'Conteneurs empilés sous une grue portuaire',
   },
   {
-    title: 'Entreposage',
-    description: 'Réception de vos achats fournisseurs dans nos entrepôts en Asie et à Dubaï.',
+    title: 'Entreposage & Réception',
+    description: "Réception, consolidation et sécurisation de vos marchandises avant expédition.",
     image: PORTAL_IMAGES.warehouse,
-    imageAlt: 'Allée d’entrepôt avec des étagères chargées de cartons',
+    imageAlt: "Allée d'entrepôt avec des étagères chargées de cartons",
   },
 ] as const;
-
-export const ROUTE_ORIGINS = ['Guangzhou', 'Yiwu', 'Dubaï', 'Istanbul'] as const;
-export const ROUTE_DESTINATIONS = ['Abidjan', 'Dakar', 'Bamako'] as const;
 
 export const WHY_US = [
   {
     icon: 'receipt',
-    title: 'Prix au mètre cube',
-    text: 'Un tarif affiché, calculé sur le volume réel mesuré en entrepôt.',
+    title: 'Tarifs transparents',
+    text: "Un tarif clair, sans frais dissimulés à l'arrivée.",
   },
   {
     icon: 'radar',
@@ -89,12 +84,12 @@ export const WHY_US = [
   {
     icon: 'shield',
     title: 'Douane gérée pour vous',
-    text: 'Nos commissionnaires s’occupent des formalités à l’arrivée.',
+    text: "Nos équipes s'occupent des démarches de dédouanement à destination.",
   },
   {
     icon: 'handshake',
-    title: 'Remise contre décharge',
-    text: 'Votre colis est remis contre signature, sur présentation du numéro.',
+    title: 'Remise sécurisée',
+    text: 'Remise de vos colis contre décharge et vérification de conformité.',
   },
 ] as const;
 
@@ -103,59 +98,31 @@ export type WhyUsIcon = (typeof WHY_US)[number]['icon'];
 export const PROCESS_STEPS = [
   {
     title: 'Dépôt',
-    description: 'Votre colis est mesuré, étiqueté et reçoit son numéro de suivi.',
+    description: 'Votre colis est réceptionné, mesuré et reçoit son numéro de suivi.',
   },
   {
     title: 'Transit',
-    description: 'Départ par conteneur maritime ou par vol cargo.',
+    description: "Départ d'Europe par conteneur maritime ou vol cargo.",
   },
   {
-    title: 'Douane',
-    description: 'Dédouanement à l’arrivée puis transfert au hub local.',
+    title: 'Dédouanement',
+    description: "Formalités administratives et douanières à l'arrivée en Afrique.",
   },
   {
-    title: 'Retrait',
-    description: 'Vous récupérez votre colis ou il vous est livré.',
+    title: 'Mise à disposition',
+    description: 'Votre colis vous est remis en toute sécurité.',
   },
 ] as const;
 
 export const TRACKING_STEPS: { key: PackageStatus; label: string }[] = [
   { key: 'registered', label: 'Enregistré' },
   { key: 'in_transit', label: 'En transit' },
-  { key: 'arrived', label: 'Arrivé au hub' },
+  { key: 'arrived', label: 'Arrivé à destination' },
   { key: 'delivered', label: 'Livré' },
 ];
 
-export const WAREHOUSES = [
-  {
-    city: 'Guangzhou',
-    country: 'Chine',
-    role: 'Hub principal Asie',
-    address: 'Baiyun District, Logistics Park N°4, Guangzhou',
-  },
-  {
-    city: 'Yiwu',
-    country: 'Chine',
-    role: 'Hub marchandises diverses',
-    address: 'Yiwu International Trade City, Warehouse B',
-  },
-  {
-    city: 'Dubaï',
-    country: 'Émirats arabes unis',
-    role: 'Plateforme fret aérien et transit',
-    address: 'Deira Cargo Village, Dubaï',
-  },
-  {
-    city: 'Abidjan',
-    country: 'Côte d’Ivoire',
-    role: 'Hub central Afrique de l’Ouest',
-    address: 'Zone 4C, Rue des Carrossiers, Treichville',
-  },
-] as const;
-
-// Chiffres déduits de l'offre ci-dessus, pas de statistiques commerciales.
 export const NETWORK_FACTS = [
-  { value: WAREHOUSES.length, label: 'Entrepôts' },
+  { value: 2, label: 'Continents reliés' },
   { value: Object.keys(TRANSPORT_MODE_LABELS).length, label: 'Modes de transport' },
-  { value: ROUTE_DESTINATIONS.length, label: 'Villes de livraison' },
+  { value: 100, label: '% Traçabilité' },
 ] as const;

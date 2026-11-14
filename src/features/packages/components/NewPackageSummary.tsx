@@ -2,9 +2,6 @@ import { Button } from '@/components/ui/Button';
 import { formatPrice, formatVolume } from '@/utils/formatters';
 import type { NewPackageForm } from '../hooks/useNewPackageForm';
 
-/** Parité fixe entre le franc CFA (XAF) et l'euro. */
-const XAF_PER_EUR = 655.957;
-
 interface NewPackageSummaryProps {
   form: NewPackageForm;
   onCancel: () => void;
@@ -28,7 +25,7 @@ export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
     <div className="space-y-6">
       <div className="sticky top-20 space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
         <h3 className="border-b pb-2 font-['Space_Grotesk'] text-lg font-bold text-[#002244]">
-          Synthèse & Cubage
+          Synthèse &amp; Cubage
         </h3>
 
         {form.formErrors.form && (
@@ -41,16 +38,22 @@ export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
         )}
         <div className="space-y-3 text-xs">
           <SummaryRow label="N° de Suivi :">
-            <span className="font-medium text-slate-700">attribué à l’enregistrement</span>
+            <span className="font-medium text-slate-700">attribué à l'enregistrement</span>
           </SummaryRow>
           <SummaryRow label="Volume calculé :">
             <span className="text-sm font-bold text-slate-800">
               {formatVolume(form.cubicMeter)}
             </span>
           </SummaryRow>
-          <SummaryRow label="Poids mesuré :">
-            <span className="font-medium text-slate-700">{form.weightKg} kg</span>
-          </SummaryRow>
+          {form.transportMode === 'air' || form.weightKg > 0 ? (
+            <SummaryRow label="Poids mesuré :">
+              <span className="font-medium text-slate-700">{form.weightKg} kg</span>
+            </SummaryRow>
+          ) : (
+            <SummaryRow label="Poids mesuré :">
+              <span className="text-slate-400 italic">Non renseigné (maritime)</span>
+            </SummaryRow>
+          )}
           <SummaryRow label="Tarif au m³ :">
             <span className="font-medium text-slate-700">{formatPrice(form.ratePerCbm)}</span>
           </SummaryRow>
@@ -61,9 +64,6 @@ export function NewPackageSummary({ form, onCancel }: NewPackageSummaryProps) {
             </span>
             <span className="mt-1 block text-2xl font-extrabold text-[#002244]">
               {formatPrice(form.finalPrice)}
-            </span>
-            <span className="text-[11px] text-slate-500">
-              ≈ {(form.finalPrice / XAF_PER_EUR).toFixed(2)} € EUR
             </span>
           </div>
         </div>

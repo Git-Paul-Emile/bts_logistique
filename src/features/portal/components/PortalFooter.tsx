@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { CONTACT, LEGAL_LINKS, PORTAL_NAV_LINKS, SERVICES } from '../portal.content';
 import { PortalNavLink } from './PortalNavLink';
@@ -12,8 +12,7 @@ export function PortalFooter() {
         <div className="lg:col-span-4">
           <Logo variant="horizontal" theme="dark" size="md" />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
-            Transport de colis par voie maritime et aérienne de la Chine, de Dubaï et de la Turquie
-            vers l’Afrique de l’Ouest.
+            {"Transport de colis par voie maritime et aérienne de l'Europe vers l'Afrique."}
           </p>
         </div>
 
@@ -42,10 +41,6 @@ export function PortalFooter() {
         <div className="lg:col-span-3">
           <h2 className="font-display text-sm font-bold">Contact</h2>
           <ul className="mt-4 space-y-3 text-sm text-white/80">
-            <li className="flex gap-3">
-              <MapPin size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-bts-green-400" />
-              <address className="not-italic">{CONTACT.address}</address>
-            </li>
             <li>
               <a href={CONTACT.phoneHref} className="flex gap-3 hover:text-bts-green-400">
                 <Phone

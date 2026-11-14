@@ -11,6 +11,7 @@ import { useLocations } from '@/features/locations/useLocations';
 import { NewPackageClientSection } from '@/features/packages/components/NewPackageClientSection';
 import { NewPackageMeasuresSection } from '@/features/packages/components/NewPackageMeasuresSection';
 import { NewPackagePaymentSection } from '@/features/packages/components/NewPackagePaymentSection';
+import { PackagePhotoCapture } from '@/features/packages/components/PackagePhotoCapture';
 import { NewPackageSummary } from '@/features/packages/components/NewPackageSummary';
 import { useNewPackageForm } from '@/features/packages/hooks/useNewPackageForm';
 import { useCreatePackage } from '@/features/packages/hooks/usePackages';
@@ -104,6 +105,11 @@ function NewPackageForm({ origins, destinations, rates, onCancel }: NewPackageFo
         <div className="space-y-6 lg:col-span-2">
           <NewPackageClientSection form={form} origins={origins} destinations={destinations} />
           <NewPackageMeasuresSection form={form} />
+          <PackagePhotoCapture
+            photos={form.photos}
+            onAdd={form.addPhoto}
+            onRemove={form.removePhoto}
+          />
           <NewPackagePaymentSection form={form} />
         </div>
         <NewPackageSummary form={form} onCancel={onCancel} />

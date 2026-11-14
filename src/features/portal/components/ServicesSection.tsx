@@ -10,7 +10,7 @@ export function ServicesSection() {
           <SectionHeading
             title="Le transport complet de vos marchandises,"
             highlight="du fournisseur à votre ville"
-            intro="Vos fournisseurs livrent dans nos entrepôts en Asie ou à Dubaï. Nous regroupons, expédions, dédouanons, puis vous remettons le colis en Afrique de l’Ouest."
+            intro="Vos fournisseurs livrent dans nos entrepôts en Europe. Nous regroupons, expédions, dédouanons, puis vous remettons le colis en Afrique."
           />
           <a
             href="#simulateur"

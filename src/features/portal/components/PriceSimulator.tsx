@@ -14,11 +14,15 @@ const DIMENSION_FIELDS: { key: keyof Dimensions; label: string }[] = [
 
 const TRANSPORT_MODES = Object.keys(TRANSPORT_MODE_LABELS) as TransportMode[];
 
-const amountFormatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const amountFormatter = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+});
 
 /** Points de suspension tant que le tarif n'est pas chargé (ou s'il n'a pas pu l'être). */
-function formatFcfa(amount: number | null | undefined): string {
-  return amount == null ? '...' : `${amountFormatter.format(amount)} FCFA`;
+function formatEur(amount: number | null | undefined): string {
+  return amount == null ? '...' : amountFormatter.format(amount);
 }
 
 export function PriceSimulator() {
@@ -41,7 +45,7 @@ export function PriceSimulator() {
               <li key={key} className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-sm text-slate-600">{TRANSPORT_MODE_LABELS[key]}</p>
                 <p className="font-display text-base font-bold text-bts-blue">
-                  {formatFcfa(rates?.[key].client_rate_per_cbm)} / m³
+                  {formatEur(rates?.[key].client_rate_per_cbm)} / m³
                 </p>
               </li>
             ))}
@@ -121,7 +125,7 @@ export function PriceSimulator() {
                   Prix estimé, {TRANSPORT_MODE_LABELS[mode].toLowerCase()}
                 </p>
                 <p className="mt-1 font-display text-4xl font-extrabold text-bts-green-400">
-                  {formatFcfa(priceXof)}
+                  {formatEur(priceXof)}
                 </p>
               </div>
               <p className="text-sm text-white/80 sm:text-right">
@@ -130,7 +134,7 @@ export function PriceSimulator() {
             </div>
             {pricing.isError && (
               <p role="alert" className="mt-3 text-sm text-white">
-                Les tarifs n’ont pas pu être chargés. Rechargez la page pour obtenir une estimation.
+                Les tarifs n'ont pas pu être chargés. Rechargez la page pour obtenir une estimation.
               </p>
             )}
             <p className="mt-4 border-t border-white/15 pt-4 text-xs text-white/65">

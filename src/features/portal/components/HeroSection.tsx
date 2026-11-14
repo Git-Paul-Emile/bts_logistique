@@ -26,19 +26,18 @@ export function HeroSection() {
         <div className="mx-auto w-full max-w-7xl px-4 pt-12 pb-32 sm:px-6 sm:pb-36">
           <div className="max-w-2xl">
             <h1 className="font-display text-4xl leading-[1.1] font-extrabold text-white sm:text-5xl sm:leading-none lg:text-6xl">
-              Vos colis de Chine, Dubaï et Turquie{' '}
-              <span className="text-bts-green-400">livrés en Afrique de l’Ouest</span>
+              {"Vos colis d'Europe"}{' '}
+              <span className="text-bts-green-400">{"livrés en Afrique"}</span>
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg sm:leading-7">
-              Groupage maritime, fret aérien et dédouanement pour les commerçants et les
-              particuliers, jusqu’à Abidjan, Dakar et Bamako.
+              {"Groupage maritime, fret aérien et dédouanement pour les professionnels et les particuliers, de l'Europe vers l'Afrique."}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href="#simulateur"
                 className="inline-flex h-12 items-center gap-2 rounded-md bg-bts-green px-5 text-sm font-semibold text-white transition-colors hover:bg-bts-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:outline-solid"
               >
-                Estimer le prix d’un envoi <ArrowRight size={16} aria-hidden="true" />
+                {"Estimer le prix d'un envoi"} <ArrowRight size={16} aria-hidden="true" />
               </a>
               <a
                 href="#suivi"

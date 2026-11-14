@@ -50,7 +50,7 @@ export function NewPackagePaymentSection({ form }: { form: NewPackageForm }) {
 
       {form.paymentOption === 'partial' && (
         <div className="pt-2">
-          <FieldLabel htmlFor="new-package-deposit">Montant de l'acompte (F CFA) *</FieldLabel>
+          <FieldLabel htmlFor="new-package-deposit">Montant de l'acompte (€) *</FieldLabel>
           <Input
             id="new-package-deposit"
             type="number"

@@ -118,7 +118,7 @@ export function UpdateStatusModal({ pkg, isOpen, onClose }: UpdateStatusModalPro
               setErrors((previous) => ({ ...previous, location: undefined }));
               setLocation(e.target.value);
             }}
-            placeholder="Ex: Entrepôt Abidjan Treichville, Port d'Abidjan..."
+            placeholder="Ex: Entrepôt, Port..."
           />
         </div>
 

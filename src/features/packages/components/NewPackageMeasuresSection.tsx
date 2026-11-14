@@ -5,16 +5,17 @@ import { TRANSPORT_MODE_LABELS } from '@/types';
 import type { NewPackageForm } from '../hooks/useNewPackageForm';
 
 /** Plus petit prix du m³ accepté, pour éviter un tarif saisi par erreur. */
-const MIN_COEFFICIENT = 1000;
+const MIN_COEFFICIENT = 1;
 
 interface MeasureFieldProps {
   id: string;
   label: string;
   value: number;
   onChange: (value: number) => void;
+  required?: boolean;
 }
 
-function MeasureField({ id, label, value, onChange }: MeasureFieldProps) {
+function MeasureField({ id, label, value, onChange, required = true }: MeasureFieldProps) {
   return (
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -24,7 +25,7 @@ function MeasureField({ id, label, value, onChange }: MeasureFieldProps) {
         min={1}
         value={value}
         onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
-        required
+        required={required}
       />
     </div>
   );
@@ -32,11 +33,13 @@ function MeasureField({ id, label, value, onChange }: MeasureFieldProps) {
 
 /** Section 2 du nouveau colis : dimensions, mode de transport, poids et tarif. */
 export function NewPackageMeasuresSection({ form }: { form: NewPackageForm }) {
+  const isAir = form.transportMode === 'air';
+
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
       <h3 className="flex items-center justify-between border-b pb-2 text-sm font-semibold text-slate-800">
-        <span>2. Dimensions, Poids & Tarification</span>
-        <span className="text-xs font-bold text-amber-700">Calcul automatique F CFA / m³</span>
+        <span>2. Dimensions, Poids &amp; Tarification</span>
+        <span className="text-xs font-bold text-amber-700">Calcul automatique € / m³</span>
       </h3>
 
       <div className="grid grid-cols-3 gap-3">
@@ -89,16 +92,28 @@ export function NewPackageMeasuresSection({ form }: { form: NewPackageForm }) {
       </fieldset>
 
       <div className="grid grid-cols-2 gap-4 pt-2">
-        <MeasureField
-          id="package-weight-kg"
-          label="Poids réel (kg) *"
-          value={form.weightKg}
-          onChange={form.setWeightKg}
-        />
+        <div>
+          <FieldLabel htmlFor="package-weight-kg">
+            {isAir ? 'Poids réel (kg) *' : 'Poids réel (kg)'}
+          </FieldLabel>
+          <Input
+            id="package-weight-kg"
+            type="number"
+            min={1}
+            value={form.weightKg}
+            onChange={(e) => form.setWeightKg(Math.max(1, Number(e.target.value)))}
+            required={isAir}
+          />
+          {!isAir && (
+            <p className="mt-1 text-[11px] text-slate-400">
+              Facultatif pour le transport maritime.
+            </p>
+          )}
+        </div>
         {form.canOverrideRate && (
           <div>
             <FieldLabel htmlFor="package-custom-coeff">
-              Coefficient appliqué (F CFA / m³)
+              Coefficient appliqué (€ / m³)
             </FieldLabel>
             <Input
               id="package-custom-coeff"

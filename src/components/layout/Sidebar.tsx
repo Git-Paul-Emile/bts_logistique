@@ -89,7 +89,7 @@ export function Sidebar({ view, onNavigate, mobileOpen = false, onCloseMobile }:
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] shrink-0 flex-col bg-[#002244] px-4 py-6 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] shrink-0 flex-col bg-[#002244] px-4 py-6 text-white transition-transform duration-200 ease-in-out lg:sticky lg:top-0 lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >

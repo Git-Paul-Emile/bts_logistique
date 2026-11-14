@@ -39,11 +39,11 @@ function validate(values: FormValues): FormErrors {
     const margin = Number(values[mode].collector_margin_per_cbm);
     if (!Number.isInteger(clientRate) || clientRate <= 0) {
       errors[`${mode}.client_rate_per_cbm`] =
-        `Saisissez un prix ${label} en F CFA, nombre entier supérieur à 0.`;
+        `Saisissez un prix ${label} en €, nombre entier supérieur à 0.`;
     }
     if (!Number.isInteger(margin) || margin < 0) {
       errors[`${mode}.collector_margin_per_cbm`] =
-        'Saisissez une marge en F CFA, nombre entier, ou 0 si aucune marge.';
+        'Saisissez une marge en €, nombre entier, ou 0 si aucune marge.';
     } else if (margin >= clientRate) {
       errors[`${mode}.collector_margin_per_cbm`] =
         'La marge doit rester inférieure au prix client.';
@@ -139,7 +139,7 @@ export function PricingSettingsForm({ grid, onSave }: PricingSettingsFormProps) 
                       updateValue(mode, 'client_rate_per_cbm', event.target.value)
                     }
                     rightElement={
-                      <span className="text-xs font-semibold text-slate-400">F CFA</span>
+                      <span className="text-xs font-semibold text-slate-400">€</span>
                     }
                   />
                   <Input
@@ -154,7 +154,7 @@ export function PricingSettingsForm({ grid, onSave }: PricingSettingsFormProps) 
                       updateValue(mode, 'collector_margin_per_cbm', event.target.value)
                     }
                     rightElement={
-                      <span className="text-xs font-semibold text-slate-400">F CFA</span>
+                      <span className="text-xs font-semibold text-slate-400">€</span>
                     }
                   />
                 </div>

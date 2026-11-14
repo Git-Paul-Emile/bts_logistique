@@ -35,8 +35,8 @@ export function useNewPackageForm(options: NewPackageFormOptions) {
   const [isNewClient, setIsNewClient] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const [origin, setOrigin] = useState(options.origins[0]?.code ?? '');
-  const [destination, setDestination] = useState(options.destinations[0]?.code ?? '');
+  const [origin, setOrigin] = useState(options.origins[0]?.code || 'FR');
+  const [destination, setDestination] = useState(options.destinations[0]?.code || 'CI');
   const [description, setDescription] = useState('');
 
   const [lengthCm, setLengthCm] = useState<number>(DEFAULT_DIMENSIONS.lengthCm);
@@ -50,6 +50,10 @@ export function useNewPackageForm(options: NewPackageFormOptions) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  const addPhoto = (dataUrl: string) => setPhotos((prev) => [...prev, dataUrl]);
+  const removePhoto = (index: number) => setPhotos((prev) => prev.filter((_, i) => i !== index));
 
   // Changer de mode applique le tarif de la grille ; l'équipe peut ensuite l'ajuster.
   const changeTransportMode = (mode: TransportMode) => {
@@ -85,7 +89,12 @@ export function useNewPackageForm(options: NewPackageFormOptions) {
     } else if (!selectedClient) {
       nextErrors.clientId = 'Choisissez le client dans la liste, ou créez un nouveau client.';
     }
-    if (origin === destination) {
+    if (!origin) {
+      nextErrors.origin = 'Le pays d’origine est obligatoire.';
+    }
+    if (!destination) {
+      nextErrors.destination = 'Le pays de destination est obligatoire.';
+    } else if (origin === destination) {
       nextErrors.destination = 'La destination doit être différente de l’origine.';
     }
     if (
@@ -184,6 +193,9 @@ export function useNewPackageForm(options: NewPackageFormOptions) {
     cubicMeter,
     finalPrice,
     handleSubmit,
+    photos,
+    addPhoto,
+    removePhoto,
   };
 }
 

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { locationsApi } from '@/api/endpoints/locations.api';
 import { queryKeys } from '@/api/queryKeys';
 import type { SelectOption } from '@/components/ui/SearchableSelect';
+import { countryName } from '@/utils/countryOptions';
 import type { NetworkLocation } from '@/types';
 
 /** Le réseau change rarement : la liste est gardée cinq minutes, comme côté serveur. */
@@ -12,7 +13,7 @@ export interface Agency {
   name: string;
 }
 
-/** Villes du réseau, leurs rôles (départ, arrivée) et leur agence. */
+/** Pays du réseau, leurs rôles (départ, arrivée) et leur agence. */
 export function useLocations() {
   const query = useQuery({
     queryKey: queryKeys.locations,
@@ -29,7 +30,7 @@ export function useLocations() {
   };
 }
 
-/** Agences du réseau, sans doublon, dans l'ordre des villes. */
+/** Agences du réseau, sans doublon, dans l'ordre des pays. */
 export function agenciesOf(locations: readonly NetworkLocation[]): Agency[] {
   const byCode = new Map<string, Agency>();
   for (const { agency } of locations) {
@@ -38,9 +39,17 @@ export function agenciesOf(locations: readonly NetworkLocation[]): Agency[] {
   return [...byCode.values()];
 }
 
-/** Options d'une liste de lieux : la valeur est le code, le libellé est le nom. */
+/**
+ * Options d'une liste de pays : la valeur est le code ISO alpha-2, le libellé est
+ * le nom en français résolu via Intl.DisplayNames (country-list fournit la source des codes).
+ */
 export function locationOptions(locations: readonly NetworkLocation[]): SelectOption<string>[] {
-  return locations.map((location) => ({ value: location.code, label: location.name }));
+  return locations
+    .map((location) => ({
+      value: location.code,
+      label: countryName(location.code),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 }
 
 export function agencyOptions(agencies: readonly Agency[]): SelectOption<string>[] {

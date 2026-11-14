@@ -3,9 +3,9 @@ import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { useClientList } from '@/features/clients/hooks/useClients';
-import { locationOptions } from '@/features/locations/useLocations';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { NetworkLocation } from '@/types';
+import { COUNTRY_OPTIONS } from '@/utils/countryOptions';
 import { clientToOption } from '@/utils/selectOptions';
 import type { NewPackageForm } from '../hooks/useNewPackageForm';
 
@@ -14,15 +14,13 @@ const CLIENT_CHOICES = 50;
 
 interface NewPackageClientSectionProps {
   form: NewPackageForm;
-  origins: readonly NetworkLocation[];
-  destinations: readonly NetworkLocation[];
+  origins?: readonly NetworkLocation[];
+  destinations?: readonly NetworkLocation[];
 }
 
 /** Section 1 du nouveau colis : client (existant ou nouveau), trajet et contenu. */
 export function NewPackageClientSection({
   form,
-  origins,
-  destinations,
 }: NewPackageClientSectionProps) {
   const [clientSearch, setClientSearch] = useState('');
   const debouncedSearch = useDebounce(clientSearch.trim());
@@ -77,7 +75,7 @@ export function NewPackageClientSection({
                 form.clearError('newClientPhone');
                 form.setNewClientPhone(e.target.value);
               }}
-              placeholder="Ex: +225 07 00 00 00"
+              placeholder="Ex: +33 7 00 00 00 00"
             />
           </div>
         </div>
@@ -111,7 +109,9 @@ export function NewPackageClientSection({
               form.clearError('destination');
               form.setOrigin(code);
             }}
-            options={locationOptions(origins)}
+            options={COUNTRY_OPTIONS}
+            placeholder="Choisir le pays d'origine"
+            searchPlaceholder="Rechercher un pays..."
           />
         </div>
         <div>
@@ -124,7 +124,9 @@ export function NewPackageClientSection({
               form.clearError('destination');
               form.setDestination(code);
             }}
-            options={locationOptions(destinations)}
+            options={COUNTRY_OPTIONS}
+            placeholder="Choisir le pays de destination"
+            searchPlaceholder="Rechercher un pays..."
           />
         </div>
       </div>
@@ -137,7 +139,7 @@ export function NewPackageClientSection({
           id="package-description"
           value={form.description}
           onChange={(e) => form.setDescription(e.target.value)}
-          placeholder="Ex: Cartons vêtements, pièces de rechange, téléphones..."
+          placeholder="Ex: Cartons vêtements, pièces de rechange, matériel informatique..."
         />
       </div>
     </div>

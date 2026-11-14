@@ -37,7 +37,7 @@ export const clientsImport: ImportDefinition<
     { header: COLUMNS.name, required: true, example: 'Boutique Exemple SARL (M. Kouassi)' },
     { header: COLUMNS.phone, required: true, example: '+225 07 00 00 00 01' },
     { header: COLUMNS.email, required: false, example: 'contact@boutique-exemple.ci' },
-    { header: COLUMNS.address, required: false, example: 'Zone 4C, Abidjan' },
+    { header: COLUMNS.address, required: false, example: '12 rue Exemple' },
   ],
   parseRow(cells) {
     const item: ClientImportItem = {

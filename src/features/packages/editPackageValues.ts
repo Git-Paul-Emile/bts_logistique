@@ -11,7 +11,7 @@ export const MEASURE_FIELDS: { key: NumericField; label: string; unit: string }[
   { key: 'height_cm', label: 'Hauteur', unit: 'cm' },
   { key: 'weight_kg', label: 'Poids', unit: 'kg' },
 ];
-export const RATE_FIELD = { key: 'rate_per_cbm' as const, label: 'Tarif au m³', unit: 'F CFA' };
+export const RATE_FIELD = { key: 'rate_per_cbm' as const, label: 'Tarif au m³', unit: '€' };
 
 export function toValues(pkg: Package): EditPackageValues {
   return {
