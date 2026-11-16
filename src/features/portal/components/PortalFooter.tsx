@@ -4,8 +4,6 @@ import { CONTACT, LEGAL_LINKS, PORTAL_NAV_LINKS, SERVICES } from '../portal.cont
 import { PortalNavLink } from './PortalNavLink';
 
 export function PortalFooter() {
-  const currentYear = new Date().getFullYear();
-
   return (
     <footer id="contact" className="scroll-mt-20 bg-bts-blue-950 text-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-12">
@@ -66,7 +64,17 @@ export function PortalFooter() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>© {currentYear} BTS Logistique. Tous droits réservés.</p>
+          <p>
+            Copyright © 2026 BTS Logistique. Propulsé par{' '}
+            <a
+              href="https://souminformatique.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white hover:underline"
+            >
+              SOUM INFORMATIQUE
+            </a>
+          </p>
           <ul className="flex flex-wrap gap-x-6 gap-y-2">
             {LEGAL_LINKS.map((link) => (
               <li key={link.href}>
